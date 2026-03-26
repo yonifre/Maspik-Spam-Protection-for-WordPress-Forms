@@ -46,10 +46,13 @@ function maspik_delete_filter() {
         $update_data = array('spam_tag' => 'not spam');
         $where = array('id' => $row_id);
 
-        // Convert textarea_field to textarea_blacklist for consistency
-        $spam_label = ($spam_label === "textarea_field") ? "textarea_blacklist" : $spam_label;
+        // Convert textarea_field to text_blacklist (merged fields)
+        // textarea_blacklist has been merged into text_blacklist
+        if ($spam_label === "textarea_field" || $spam_label === "textarea_blacklist") {
+            $spam_label = "text_blacklist";
+        }
 
-        if($spam_label == "text_blacklist" || $spam_label == "textarea_blacklist" || $spam_label == "emails_blacklist" || $spam_label == "ip_blacklist"){
+        if($spam_label == "text_blacklist" || $spam_label == "emails_blacklist" || $spam_label == "ip_blacklist"){
             
             $option_arval = efas_makeArray(maspik_get_settings($spam_label));
 
@@ -121,116 +124,196 @@ function maspik_delete_filter() {
 
     function maspik_delete_row() {
         global $wpdb;
-    
+
         // Add nonce verification
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'maspik_delete_action')) {
-            wp_send_json_error('Invalid security token.');
+            wp_send_json_error([
+                'message' => 'Invalid security token.',
+                'code' => 'invalid_nonce'
+            ]);
             return;
         }
-    
-        if ( ! current_user_can( 'manage_options' ) ) {
-            wp_send_json_error('You do not have permission to perform this action.');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error([
+                'message' => 'You do not have permission to perform this action.',
+                'code' => 'insufficient_permissions'
+            ]);
             return;
         }
-    
-        $row_id = intval($_POST['row_id']);
+
+        $row_id = isset($_POST['row_id']) ? absint($_POST['row_id']) : 0;
+        if (!$row_id) {
+            wp_send_json_error([
+                'message' => 'Invalid row ID.',
+                'code' => 'invalid_row_id'
+            ]);
+            return;
+        }
+
         $table = maspik_get_logtable();
+        $result = $wpdb->delete(
+            $table,
+            ['id' => $row_id],
+            ['%d']
+        );
 
-        $spam_tag = $wpdb->get_var( $wpdb->prepare(
-            "SELECT spam_tag FROM $table WHERE id = %d",
-            $row_id
-        ));
-    
-        // Update the is_deleted column instead of deleting the row
-        $update_data = array('spam_tag' => 'spam');
-        $where = array('id' => $row_id);
-
-        if($spam_tag == "not spam"){
-            $spam_action = $wpdb->delete($table, array('id' => $row_id));
-        }else{
-            $spam_action = $wpdb->update($table, $update_data, $where);
-        }     
-    
-        if ($spam_action !== false) {
-            wp_send_json_success();
-        } else {
-            wp_send_json_error('Failed to update row.');
+        if ($result === false) {
+            wp_send_json_error([
+                'message' => 'Failed to delete row from database.',
+                'code' => 'delete_failed',
+                'wpdb_last_error' => $wpdb->last_error
+            ]);
+            return;
         }
-    }
-    add_action('wp_ajax_delete_row', 'maspik_delete_row');
 
-//Spam log delete functions -- END
-
-function maspik_insert_to_table() {
-    static $already_run = false;
-    
-    // Run only once per request
-    if ($already_run) {
-        return;
+        wp_send_json_success([
+            'message' => 'Row deleted successfully.',
+            'row_id' => $row_id
+        ]);
     }
-    
-    // Check if we already checked the columns today (saved in options)
-    $last_check = get_option('maspik_insert_last_check');
-    if ($last_check && $last_check > strtotime('-48 hours')) {
-        $already_run = true;
-        return;
+    add_action('wp_ajax_maspik_delete_row', 'maspik_delete_row');
+
+/**
+ * Mark log entry as not spam and optionally report AI false positive.
+ * Always fail-open: marking succeeds even if the report call fails.
+ */
+function maspik_not_spam() {
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => 'Permission denied'));
+    }
+
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'maspik_delete_action')) {
+        wp_send_json_error(array('message' => 'Invalid security token'));
+    }
+
+    $row_id      = isset($_POST['row_id']) ? absint($_POST['row_id']) : 0;
+    $send_report = !empty($_POST['send_report']);
+
+    if (!$row_id) {
+        wp_send_json_error(array('message' => 'Invalid row ID.'));
     }
 
     global $wpdb;
-    $table = maspik_get_dbtable();
-    $setting_value = maspik_get_dbvalue();
-    $setting_label = maspik_get_dblabel();
+    $table = maspik_get_logtable();
+    $row   = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $row_id), ARRAY_A);
 
-    // Rows to be inserted if they don't exist
-    $rows = [
-        ['MaspikHoneypot', 1], // Honeypot ver 2.1.2
-        ['maspik_support_jetforms', 'yes'], // jetforms ver 2.1.2
-        ['maspik_support_everestforms', 'yes'], // everestforms ver 2.1.2
-        ['maspikDbCheck', 1], // maspikDbCheck ver 2.1.6
-        ['maspik_support_buddypress_forms', 'yes'] // buddypress ver 2.2.7
-    ];
+    if (!$row) {
+        wp_send_json_error(array('message' => 'Row not found.'));
+    }
+    
+    // Get spam_type from row data (source of truth)
+    $spam_type = '';
+    if (isset($row['spam_type']) && !empty($row['spam_type'])) {
+        $spam_type = sanitize_text_field(trim($row['spam_type']));
+    }
+    
+    // Fallback to POST value if row doesn't have it
+    if (empty($spam_type)) {
+        $spam_type = isset($_POST['spam_type']) ? sanitize_text_field(wp_unslash($_POST['spam_type'])) : '';
+    }
+    
+    // Final fallback
+    if (empty($spam_type)) {
+        $spam_type = 'mark_not_spam';
+    }
 
-    // Check if the rows already exist
-    $existing_rows = $wpdb->get_col("
-        SELECT $setting_label 
-        FROM $table 
-        WHERE $setting_label IN ('" . implode("','", array_column($rows, 0)) . "')
-    ");
+    $update = $wpdb->update(
+        $table,
+        array('spam_tag' => 'not spam'),
+        array('id' => $row_id),
+        array('%s'),
+        array('%d')
+    );
 
-    // Prepare rows to add
-    $rows_to_insert = [];
-    foreach ($rows as [$name, $value]) {
-        if (!in_array($name, $existing_rows)) {
-            $rows_to_insert[] = $wpdb->prepare(
-                "(%s, %s)",
-                $name,
-                $value
+    if ($update === false) {
+        wp_send_json_error(array('message' => 'Failed to update row.', 'wpdb_error' => $wpdb->last_error));
+    }
+
+    $report_sent  = false;
+    $report_error = null;
+
+    // Always send report if user requested it, regardless of spam type
+    if ($send_report) {
+        try {
+            $server_ip = isset($_SERVER['SERVER_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['SERVER_ADDR'])) : '';
+            if (!$server_ip && function_exists('gethostbyname')) {
+                $server_ip = gethostbyname(parse_url(home_url(), PHP_URL_HOST));
+            }
+
+            $payload = array(
+                'plugin_report'  => true,
+                'site_url'       => home_url(),
+                'server_ip'      => $server_ip,
+                'server_host'    => isset($_SERVER['HTTP_HOST']) ? sanitize_text_field(wp_unslash($_SERVER['HTTP_HOST'])) : '',
+                'wp_version'     => get_bloginfo('version'),
+                'plugin_version' => defined('MASPIK_VERSION') ? MASPIK_VERSION : '',
+                'marked_at'      => current_time('mysql'),
+                'action'         => $spam_type,
+                'log_entry'      => $row,
             );
+
+            $headers = array(
+                'Content-Type'  => 'application/json',
+                'plugin_report' => 'true',
+            );
+
+            $body_json = wp_json_encode($payload);
+            
+            // Validate JSON encoding
+            if ($body_json === false || json_last_error() !== JSON_ERROR_NONE) {
+                $report_error = 'JSON encoding failed';
+            } else {
+                $response = wp_remote_post(
+                    'https://ipapi.wpmaspik.com/report',
+                    array(
+                        'headers'   => $headers,
+                        'body'      => $body_json,
+                        'timeout'   => 5,
+                        'sslverify' => true,
+                    )
+                );
+
+                if (is_wp_error($response)) {
+                    $report_error = $response->get_error_message();
+                } else {
+                    $code = wp_remote_retrieve_response_code($response);
+                    $response_body = wp_remote_retrieve_body($response);
+                    if ($code >= 200 && $code < 300) {
+                        $report_sent = true;
+                    } else {
+                        $report_error = 'HTTP ' . $code . ( !empty($response_body) ? ': ' . substr($response_body, 0, 200) : '' );
+                    }
+                }
+            }
+        } catch ( Exception $e ) {
+            // On exception, don't break the site - just log error and continue
+            $report_error = 'Exception: ' . $e->getMessage();
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Maspik False Positive Report Exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            }
+        } catch ( Error $e ) {
+            // On fatal error, don't break the site - just log error and continue
+            $report_error = 'Fatal Error: ' . $e->getMessage();
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Maspik False Positive Report Fatal Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            }
         }
     }
 
-    // Insert all new rows in one query
-    if (!empty($rows_to_insert)) {
-        $wpdb->query("
-            INSERT INTO $table ($setting_label, $setting_value) 
-            VALUES " . implode(',', $rows_to_insert)
-        );
-    }
-
-    // Update the last check time
-    update_option('maspik_insert_last_check', time());
-    $already_run = true;
+    wp_send_json_success(
+        array(
+            'row_id'       => $row_id,
+            'report_sent'  => $report_sent,
+            'report_error' => $report_error,
+        )
+    );
 }
+add_action('wp_ajax_maspik_not_spam', 'maspik_not_spam');
 
-// Hook the function on load
-// this function is not needed anymore, TODO next: remove it from the code completely
-//add_action('init', 'maspik_insert_to_table');
-
-
-
+//Spam log delete functions -- END
 
 //check if table exists
-
     function maspik_table_exists($rowtocheck = false) {
         static $table_exists = null;     
         static $row_exists = array();    
@@ -242,28 +325,35 @@ function maspik_insert_to_table() {
             // Check and save the result
             $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") == $table_name;
         }
-        // In the next times, use the saved value
         
+        // if the table doesn't exist, return false
         if (!$table_exists) {
             return false;
         }
         
-        if ($rowtocheck == 'text_blacklist') {
-            // Check if we already checked this row
+        // if we want to check text_blacklist
+        if ($rowtocheck === 'text_blacklist') {
+            // if we didn't check this row yet
             if (!isset($row_exists['text_blacklist'])) {
                 global $wpdb; 
-                $table_name = $wpdb->prefix . 'maspik_options'; 
-                // If we didn't check this row, check and save the result
-                $row_exists['text_blacklist'] = $wpdb->get_var($wpdb->prepare(
+                $table_name = $wpdb->prefix . 'maspik_options';
+                
+                // check if the row exists
+                $exists = $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(*) FROM {$table_name} WHERE option_name = %s",
-                    $rowtocheck
-                )) > 0;
+                    'text_blacklist'
+                ));
+                
+                // save the result
+                $row_exists['text_blacklist'] = ($exists > 0);
             }
-            // In the next times, use the saved value
+            
+            // return the saved result
             return $row_exists['text_blacklist'];
         }
         
-        return true;
+        // if we didn't ask to check a specific row, return if the table exists
+        return $table_exists;
     }
 
     function maspik_logtable_exists() {
@@ -283,9 +373,22 @@ function maspik_insert_to_table() {
 // Save to DB Function 
     function maspik_save_settings($col_name, $new_value) {
         // check if the values are valid
-        if (empty($col_name) || $col_name === '0' || $col_name === 0) {
+        if (empty($col_name) || $col_name === '0' || $col_name === 0 ) {
             return ;
         }
+        // Check if value is empty (handle both strings and arrays)
+        if (is_string($new_value)) {
+            if (empty(trim($new_value)) && $new_value !== '0') {
+                $new_value = '';
+            }
+        } elseif (is_array($new_value)) {
+            if (empty($new_value)) {
+                $new_value = [];
+            }
+        } elseif (empty($new_value) && $new_value !== 0) {
+            $new_value = '';
+        }
+
 
         global $wpdb;
         $table = maspik_get_dbtable();
@@ -294,7 +397,16 @@ function maspik_insert_to_table() {
 
             // sanitize the values
         $col_name = sanitize_text_field($col_name);
-        $new_value = is_numeric($new_value) ? intval($new_value) : wp_strip_all_tags($new_value);
+        
+        // Handle different value types for sanitization
+        if (is_numeric($new_value)) {
+            $new_value = intval($new_value);
+        } elseif (is_array($new_value)) {
+            // For arrays (like AI logs), we'll store them as JSON
+            $new_value = wp_json_encode($new_value);
+        } elseif (is_string($new_value)) {
+            $new_value = wp_strip_all_tags($new_value);
+        }
 
         // check if the row exists
         $exists = $wpdb->get_var($wpdb->prepare(
@@ -368,7 +480,7 @@ function maspik_get_settings($data_name, $type = '', $table_var = 'new'){
 
     global $wpdb;
     if($table_var == 'old'){
-        $table = $wpdb->prefix . 'options'; // old table
+        $table = $wpdb->prefix . 'options';
         $setting_label = 'option_name';
         $setting_value = 'option_value';
     } else {
@@ -383,31 +495,40 @@ function maspik_get_settings($data_name, $type = '', $table_var = 'new'){
 
     // Check if there are any results
     if ($results) {
-        $data = ''; // clean variable
-        if($type == "toggle"){// data for toggles
-            foreach ($results as $result) {
-                $data = $result->$setting_value  == 1 ? 'checked' : '';
+        $result = $results[0];
+        $value = $result->$setting_value;
+    
+        if($type == "toggle"){
+            return $value == 1 ? 'checked' : '';
+        } 
+        elseif($type == "form-toggle"){
+            if (!$value){
+                return 1;
             }
-        } elseif($type == "form-toggle"){// data for toggles
-            foreach ($results as $result) {
-                if (!$result->$setting_value){
-                    $data = 1;
-                } else {
-                    $data = $result->$setting_value  == 'yes' ? 'yes' : 'no';
+            return $value == 'yes' ? 'yes' : 'no';
+        } 
+        elseif($type == "select"){
+            return $results;
+        } 
+        else {
+            // for everything else
+            if ($value === null || $value == '') {
+                return '';
+            }
+            
+            // Try to decode JSON if it looks like JSON
+            if (is_string($value) && (strpos($value, '{') === 0 || strpos($value, '[') === 0)) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $decoded;
                 }
             }
-        } elseif($type == "select"){// just return raw for select
-            $data = $results;
-        } else {// for everything else
-            foreach ($results as $result) {
-                $data .= $result->$setting_value; 
-            }
+            
+            return $value;
         }
-    } else { 
-        $data = null; 
     }
     
-    return $data;
+    return null;
 }
 //Get data from DB - END
 
@@ -455,38 +576,6 @@ function create_maspik_table() {
     dbDelta($sql);        
 }
 
-//make new log table
-function create_maspik_log_table() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'maspik_spam_logs';
-    
-    // define the structure of the table
-    $sql = "CREATE TABLE $table_name (
-        id mediumint(9) NOT NULL AUTO_INCREMENT,
-        spam_type varchar(191) NOT NULL,
-        spam_value varchar(191) NOT NULL,
-        spam_detail longtext NOT NULL,
-        spam_ip varchar(191) NOT NULL,
-        spam_country varchar(191) NOT NULL,
-        spam_agent varchar(191) NOT NULL,
-        spam_date varchar(191) NOT NULL,
-        spam_source varchar(191) NOT NULL,
-        spamsrc_label varchar(191) NOT NULL,
-        spamsrc_val varchar(191) NOT NULL,
-        spam_tag varchar(191) NOT NULL,
-        PRIMARY KEY  (id)
-    ) " . $wpdb->get_charset_collate();
-
-    // if the table doesn't exist or if we need to update the structure
-    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-    dbDelta($sql);
-    
-    // mark the function as run successfully
-    update_option('maspik_columns_last_check', '2');
-}
-
-
-
 function maspik_limit_log_size() {
     global $wpdb;
 
@@ -500,7 +589,7 @@ function maspik_limit_log_size() {
 
     if ($current_count > $max_logs) {
         // Calculate the number of records to delete
-        $entries_to_delete = $current_count - $max_logs;
+        $entries_to_delete = $current_count - $max_logs + intval($max_logs * 0.1); // 10% more to avoid deleting too many times
 
         // Delete the oldest records
         $wpdb->query("
@@ -535,12 +624,20 @@ function efas_add_to_log($type = '', $input = '', $post = null, $source = "Eleme
         $ip = maspik_get_real_ip();
         $countryName = "Other (Unknown)";
         
-        $response = wp_remote_get("http://www.geoplugin.net/json.gp?ip=" . $ip );
+        $response = wp_remote_get("https://free.freeipapi.com/api/json/" . $ip );
         if ( !is_wp_error($response) && wp_remote_retrieve_response_code($response) == 200 ) {
             $body = wp_remote_retrieve_body($response);
             $geoData = json_decode($body, true);
-            if ( isset($geoData['geoplugin_countryName']) && !empty($geoData['geoplugin_countryName']) ) {
-                $countryName = sanitize_text_field($geoData['geoplugin_countryName']);
+            $asnOrganization = isset($geoData['asnOrganization']) ? $geoData['asnOrganization'] : '';
+            if (is_string($asnOrganization) && stripos($asnOrganization, 'cloudflare') !== false) {
+                $realCountry = isset($geoData['countryName']) && !empty($geoData['countryName'])
+                    ? sanitize_text_field($geoData['countryName'])
+                    : 'Unknown';
+                $countryName = sprintf('Cloudflare edge (%s)', $realCountry);
+            } else {
+                if ( isset($geoData['countryName']) && !empty($geoData['countryName']) ) {
+                    $countryName = sanitize_text_field($geoData['countryName']);
+                }
             }
         }
         
@@ -645,6 +742,7 @@ function maspik_save_log($type, $value, $detail, $ip, $country, $agent, $date, $
 
 function maspik_Download_log_btn(){
         ?><form method="post" class="downloadform" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+        <?php wp_nonce_field('maspik_download_csv_action', 'maspik_download_csv_nonce'); ?>
         <input type="hidden" name="action" value="Maspik_spamlog_download_csv">
         <input type="submit" value="Download CSV" class="maspik-btn">
     </form><?php
@@ -652,32 +750,7 @@ function maspik_Download_log_btn(){
 
 
 function maspik_get_real_ip() {
-    $headers = [
-        'CF-Connecting-IP', // Cloudflare (most accurate for Cloudflare)
-        'HTTP_CF_CONNECTING_IP', // Cloudflare (less popular)
-        'HTTP_X_REAL_IP', // Nginx 
-        'HTTP_X_FORWARDED_FOR',  // Proxy forwarding
-        'HTTP_CLIENT_IP',
-        'HTTP_X_FORWARDED',
-        'HTTP_X_CLUSTER_CLIENT_IP',
-        'HTTP_FORWARDED_FOR',
-        'HTTP_FORWARDED',
-        'REMOTE_ADDR' // Default
-    ];
-
-    foreach ($headers as $key) {
-        if (!empty($_SERVER[$key])) {
-            $ip_list = explode(',', $_SERVER[$key]);
-            foreach ($ip_list as $ip) {
-                $ip = trim($ip);
-                if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
-                    return $ip;
-                }
-            }
-        }
-    }
-
-    return '127.0.0.1';
+	return Maspik_Client_Ip::get_client_ip();
 }
 
 
@@ -691,8 +764,12 @@ function efas_makeArray($string,$type="") {
         return  array_filter($array); //removes all null values
     }
 
-    $string = strtolower($string);
-    return explode("\n", str_replace("\r", "", $string));
+    // Split first, then lowercase each item separately
+    // This approach is better for non-ASCII characters (e.g., Cyrillic, Arabic)
+    // as it preserves encoding better than doing strtolower() on the entire string
+    $array = explode("\n", str_replace("\r", "", $string));
+    $array = array_map('strtolower', $array);
+    return $array;
 }
 
 // Check if field value exists in string
@@ -728,7 +805,35 @@ function maspik_is_field_value_equal_to_string($string, $field_value) {
 }
 
 function efas_get_spam_api($field = "text_field",$type = "array") {
-    $spamapi_option = get_option('spamapi'); 
+    $spamapi_option = get_option('spamapi');
+    $spamapi_option = is_array($spamapi_option) ? $spamapi_option : array();
+
+    global $MASPIK_SYNC_BOOL_API_TO_LOCAL;
+    if ( ! empty( $MASPIK_SYNC_BOOL_API_TO_LOCAL ) && $type === 'bool' && isset( $MASPIK_SYNC_BOOL_API_TO_LOCAL[ $field ] ) ) {
+        $local_key = $MASPIK_SYNC_BOOL_API_TO_LOCAL[ $field ];
+        $local_val = maspik_get_settings( $local_key );
+        $api_val   = false;
+        if ( ( maspik_get_settings('private_file_id') || maspik_get_settings("popular_spam") ) && is_array($spamapi_option) && cfes_is_supporting("api") && isset( $spamapi_option[ $field ] ) ) {
+            $raw = $spamapi_option[ $field ];
+            $api_val = is_array( $raw ) ? $raw[0] : $raw;
+        }
+        $local_truthy = !empty( $local_val ) && $local_val !== '0' && $local_val !== 0;
+        $api_truthy   = !empty( $api_val ) && $api_val !== '0' && $api_val !== 0;
+        return $local_truthy || $api_truthy;
+    }
+    // Support local key for honeypot/time so callers can use maspikHoneypot / maspikTimeCheck (field is value, not API key)
+    if ( ! empty( $MASPIK_SYNC_BOOL_API_TO_LOCAL ) && $type === 'bool' && in_array( $field, $MASPIK_SYNC_BOOL_API_TO_LOCAL, true ) && ! isset( $MASPIK_SYNC_BOOL_API_TO_LOCAL[ $field ] ) ) {
+        $api_key   = array_search( $field, $MASPIK_SYNC_BOOL_API_TO_LOCAL, true );
+        $local_val = maspik_get_settings( $field );
+        $api_val   = false;
+        if ( ( maspik_get_settings('private_file_id') || maspik_get_settings("popular_spam") ) && is_array($spamapi_option) && cfes_is_supporting("api") && isset( $spamapi_option[ $api_key ] ) ) {
+            $raw = $spamapi_option[ $api_key ];
+            $api_val = is_array( $raw ) ? $raw[0] : $raw;
+        }
+        $local_truthy = !empty( $local_val ) && $local_val !== '0' && $local_val !== 0;
+        $api_truthy   = !empty( $api_val ) && $api_val !== '0' && $api_val !== 0;
+        return $local_truthy || $api_truthy;
+    }
    
     if ((!maspik_get_settings('private_file_id') && !maspik_get_settings("popular_spam") ) || !is_array($spamapi_option) || !cfes_is_supporting("api") || !isset($spamapi_option[$field])) {
         return false;
@@ -736,18 +841,33 @@ function efas_get_spam_api($field = "text_field",$type = "array") {
 
     $api_field = $spamapi_option[$field];
 
-    //$api_field = "";
-
     if ($type != "array") {
             // Keep the field value if it's not an array
             $api_field = is_array($spamapi_option[$field]) ? $spamapi_option[$field][0] : $spamapi_option[$field] ;
-            $clean = sanitize_text_field($api_field);
+            // If the value is 0, return it as a number
+            if ($api_field === "0" || $api_field === 0) {
+                return 0;
+            }
+            // Note: We don't use sanitize_text_field here because:
+            // 1. Data from WordPress (text_blacklist) doesn't go through sanitize_text_field after retrieval
+            // 2. sanitize_text_field can corrupt non-ASCII characters (e.g., Cyrillic, Arabic)
+            // 3. Data is displayed with esc_html() in admin, which is sufficient for XSS protection
+            // 4. Data is only used for string comparison, not direct output to users
+            $clean = trim($api_field);
+            return $clean;
     } else {
         // Convert non-array fields to an array using efas_makeArray 
         $api_field = efas_makeArray($spamapi_option[$field],$type);
 
-        //Better to sanitize
-        $clean = array_map('sanitize_text_field', $api_field);
+        // Note: We don't use sanitize_text_field here because:
+        // 1. Data from WordPress (text_blacklist) doesn't go through sanitize_text_field after retrieval
+        // 2. sanitize_text_field can corrupt non-ASCII characters (e.g., Cyrillic, Arabic)
+        //    This causes mismatches when comparing API data vs WordPress data
+        // 3. Data is displayed with esc_html() in admin (maspik_spam_api_list), which is sufficient for XSS protection
+        // 4. Data is only used for string comparison (maspik_is_field_value_exist_in_string), not direct output
+        // 5. WordPress automatically escapes data stored in options table
+        // Just trim whitespace to match how WordPress data is processed
+        $clean = array_map('trim', $api_field);
 
         // Remove empty values from Array
         $clean = array_filter($clean, function($value) {
@@ -813,8 +933,12 @@ function efas_array_supports_plugin(){
     'Jetforms'=> 0,
     'Everestforms'=> 0,
     'Buddypress' => 0,
+    'Custom PHP Forms' => 0,
+    'MetForm' => 0,
+    'BitForm' => 0,
     'Woocommerce Review' => $info,
     'Woocommerce Registration' => $info,
+    'Woocommerce Orders' => $info,
     'Wpforms' => $info,
     'Gravityforms' => $info,
   );
@@ -859,9 +983,6 @@ function maspik_if_plugin_is_active($plugin) {
 }
 
 function efas_if_plugin_is_affective($plugin , $status = "no"){
-
-   
-
 	if($plugin == 'Elementor pro'){
       return efas_if_plugin_is_active('elementor-pro') && maspik_get_settings( "maspik_support_Elementor_forms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Contact form 7'){
@@ -874,6 +995,8 @@ function efas_if_plugin_is_affective($plugin , $status = "no"){
       return efas_if_plugin_is_active('woocommerce') && cfes_is_supporting("plugin") && maspik_get_settings( "maspik_support_woocommerce_review", 'form-toggle' ) != $status ;
     }else if($plugin == 'Woocommerce Registration'){
       return efas_if_plugin_is_active('woocommerce') && cfes_is_supporting("plugin") && maspik_get_settings( "maspik_support_Woocommerce_registration", 'form-toggle' ) != $status;
+    }else if($plugin == 'Woocommerce Orders'){
+      return efas_if_plugin_is_active('woocommerce') && cfes_is_supporting("plugin") && maspik_get_settings( "maspik_support_woocommerce_orders", 'form-toggle' ) != $status;
     }else if($plugin == 'Wpforms'){
       return  efas_if_plugin_is_active('wpforms') && cfes_is_supporting("plugin") && maspik_get_settings( "maspik_support_Wpforms", 'form-toggle' ) != $status  ;
     }else if($plugin == 'Gravityforms'){
@@ -884,6 +1007,8 @@ function efas_if_plugin_is_affective($plugin , $status = "no"){
       return efas_if_plugin_is_active('fluentforms')  && maspik_get_settings( "maspik_support_fluentforms_forms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Bricks'){
       return efas_if_plugin_is_active('bricks')  && maspik_get_settings( "maspik_support_bricks_forms", 'form-toggle' ) != $status ;
+    }else if($plugin == 'Breakdance'){
+      return efas_if_plugin_is_active('breakdance')  && maspik_get_settings( "maspik_support_breakdance_forms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Forminator'){
       return efas_if_plugin_is_active('forminator')  && maspik_get_settings( "maspik_support_forminator_forms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Wordpress Registration'){
@@ -894,8 +1019,14 @@ function efas_if_plugin_is_affective($plugin , $status = "no"){
         return efas_if_plugin_is_active('jetforms') && maspik_get_settings( "maspik_support_jetforms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Everestforms'){
         return efas_if_plugin_is_active('everestforms') && maspik_get_settings( "maspik_support_everestforms", 'form-toggle' ) != $status ;
+    }else if($plugin == 'MetForm'){
+        return efas_if_plugin_is_active('metform') && maspik_get_settings( "maspik_support_metform_forms", 'form-toggle' ) != $status ;
+    }else if($plugin == 'BitForm'){
+        return efas_if_plugin_is_active('bitform') && maspik_get_settings( "maspik_support_bitform_forms", 'form-toggle' ) != $status ;
     }else if($plugin == 'Wordpress Comments'){
       return maspik_get_settings( "maspik_support_wp_comment", 'form-toggle' ) != $status ;
+    }else if($plugin == 'Custom PHP Forms'){
+      return maspik_get_settings( "maspik_support_custom_forms", 'form-toggle' ) == "yes" ;
     }else{
       return 1;
     }
@@ -932,39 +1063,62 @@ function efas_if_plugin_is_active($plugin){
         return maspik_is_plugin_active('everest-forms/everest-forms.php');
     }else if($plugin == 'Wordpress Registration'){
       return get_option('users_can_register') == 1;
-    }else{
+    }else if($plugin == 'bitform'){
+        return maspik_is_plugin_active('bit-form/bitforms.php');
+    }else if($plugin == 'metform'){
+        return maspik_is_plugin_active('metform/metform.php');
+    }else if($plugin == 'breakdance'){
+        return maspik_is_plugin_active('breakdance/plugin.php');
+    }
+    else{
       return 1;
     }
 }
 
-//Display admin notices 
-function contact_forms_anti_spam_plugin_admin_notice(){
-    $screen = get_current_screen()->id;
-    if ( strpos($screen, 'maspik') !== false ){
-        ?><div class="notice notice-warning is-dismissible">
-        <p><?php esc_html_e('Use this plugin with caution and only if you understand the risk, blacklisting some words can lead to the termination of valid leads.', 'contact-forms-anti-spam') ?></p>
-        </div><?php  
+//Display only on maspik pages
+function maspik_is_maspik_page() {
+    // Check if we're in admin and if the page parameter contains 'maspik'
+    if (!is_admin() || !isset($_GET['page'])) {
+        return;
+    }
+
+    // Check if we're on a Maspik page
+    if (strpos($_GET['page'], 'maspik') !== false) {
+        // Hide all admin notices
+        global $wp_filter;
+        remove_all_actions('user_admin_notices');
+        remove_all_actions('admin_notices');
+        if (isset($wp_filter['admin_notices'])) {
+            // Remove all actions hooked to the 'admin_notices' hook
+            unset($wp_filter['admin_notices']);
+        }
+
         // Change the footer text
         add_filter('admin_footer_text', 'maspik_change_footer_admin');
+        
         // Add script to footer admin to open external links in new tab
         add_action('admin_footer', function() {
             ?>
             <script>
+            // Open external links in new tab By Maspik 
             document.addEventListener('DOMContentLoaded', function() {
                 var links = document.querySelectorAll('#toplevel_page_maspik li a');
                 for (var i = 0; i < links.length; i++) {
                     if (links[i].href.startsWith('https://') && !links[i].href.includes(window.location.hostname)) {
                         links[i].target = '_blank';
+                        if(links[i].href.includes('upgrade')) {
+                            links[i].style.color = '#f48623';
+                            links[i].style.fontWeight = 'bold';
+                        }
                     }
                 }
             });
             </script>
             <?php
         });
-     }
-   
+    }
 }
-add_action( 'admin_notices', 'contact_forms_anti_spam_plugin_admin_notice' );
+add_action('admin_init', 'maspik_is_maspik_page', 99999);
 
 function maspik_change_footer_admin () {
     echo '<p id="footer-left" class="alignleft">
@@ -1266,7 +1420,7 @@ function Maspik_admin_notice() {
                             location.reload();
                         },
                         error: function(error) {
-                            console.log(error);
+                            // Error handled silently
                         }
                     });
                 });
@@ -1284,7 +1438,7 @@ function Maspik_admin_notice() {
                             $('.notice.is-dismissible').remove();
                         },
                         error: function(error) {
-                            console.log(error);
+                            // Error handled silently
                         }
                     });
                 });
@@ -1340,6 +1494,11 @@ function Maspik_export_settings() {
     // Check nonce
     if (!isset($_POST['Maspik_export_settings_nonce_field']) || !wp_verify_nonce($_POST['Maspik_export_settings_nonce_field'], 'Maspik_export_settings_nonce')) {
         wp_die('Security check failed');
+    }
+    
+    // Check if user has permission to access admin area
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.', 'contact-forms-anti-spam'));
     }
 
     // Get Maspik settings
@@ -1402,6 +1561,11 @@ function Maspik_import_settings() {
     if (!isset($_POST['Maspik_import_settings_nonce_field']) || !wp_verify_nonce($_POST['Maspik_import_settings_nonce_field'], 'Maspik_import_settings_nonce')) {
         wp_die('Security check failed');
     }
+    
+    // Check if user has permission to access admin area
+    if (!current_user_can('manage_options')) {
+        wp_die(__('You do not have sufficient permissions to access this page.', 'contact-forms-anti-spam'));
+    }
 
     // Check if a file was uploaded
     if (!isset($_FILES['maspik-settings']) || $_FILES['maspik-settings']['error'] !== UPLOAD_ERR_OK) {
@@ -1458,8 +1622,46 @@ function Maspik_import_settings() {
 
     global $MASPIK_IMPORT_OPTIONS;
     
+    // Handle textarea_blacklist merge if it exists in imported data
+    if (isset($sanitized_data['textarea_blacklist']) && !empty($sanitized_data['textarea_blacklist'])) {
+        $textarea_blacklist = str_replace(",,," , "\n" ,$sanitized_data['textarea_blacklist']);
+        $text_blacklist = isset($sanitized_data['text_blacklist']) ? str_replace(",,," , "\n" ,$sanitized_data['text_blacklist']) : maspik_get_settings('text_blacklist');
+        
+        // Convert both to arrays
+        $text_array = !empty($text_blacklist) ? efas_makeArray($text_blacklist) : array();
+        $textarea_array = efas_makeArray($textarea_blacklist);
+        
+        // Merge arrays, removing duplicates (case-insensitive)
+        foreach ($textarea_array as $item) {
+            $item_trimmed = trim($item);
+            if (!empty($item_trimmed)) {
+                // Check if item already exists (case-insensitive)
+                $exists = false;
+                foreach ($text_array as $existing_item) {
+                    if (strtolower(trim($existing_item)) === strtolower($item_trimmed)) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $text_array[] = $item_trimmed;
+                }
+            }
+        }
+        
+        // Update text_blacklist with merged content
+        $sanitized_data['text_blacklist'] = str_replace("\n" , ",,," , implode("\n", $text_array));
+        // Remove textarea_blacklist from import
+        unset($sanitized_data['textarea_blacklist']);
+    }
+    
     // Iterate over each option
     foreach ($MASPIK_IMPORT_OPTIONS as $option) {
+        // Skip textarea_blacklist as it's been merged
+        if ($option === 'textarea_blacklist') {
+            continue;
+        }
+        
         // Check if the option exists in $sanitized_data and is not empty
         if (isset($sanitized_data[$option]) && !empty($sanitized_data[$option])) {
             // Perform replacements only if the option exists and is not empty
@@ -1504,6 +1706,16 @@ function maspik_array_to_html_table($array) {
 add_action('admin_post_Maspik_spamlog_download_csv', 'Maspik_spamlog_download_csv');
 
 function Maspik_spamlog_download_csv() {
+    // Check if user has permission to access admin area (same as spam log page)
+    if (!current_user_can('edit_pages')) {
+        wp_die(__('You do not have sufficient permissions to access this page.', 'contact-forms-anti-spam'));
+    }
+    
+    // Verify nonce to prevent CSRF attacks
+    if (!isset($_POST['maspik_download_csv_nonce']) || !wp_verify_nonce($_POST['maspik_download_csv_nonce'], 'maspik_download_csv_action')) {
+        wp_die(__('Security check failed. Please try again.', 'contact-forms-anti-spam'));
+    }
+    
     global $wpdb;
     $table_name = $wpdb->prefix . 'maspik_spam_logs';
 
@@ -1679,6 +1891,44 @@ function maspik_increment_blocks() {
     $api_data['months'][$current_month]['blocks']++;
     
     update_option("maspik_api_requests", $api_data);
+}
+
+/**
+ * AI metrics (MASPIK Matrix): one read + one write per submission.
+ * Call once per request with deltas (e.g. after you know sent=1, spam=0|1).
+ * Retrieve with maspik_get_settings('maspik_ai_metrics').
+ * Structure: [ 'by_month' => [ 'YYYYMM' => [ 'checks' => n, 'spam' => n ], ... ], 'total_checks' => n, 'total_spam' => n ]
+ */
+function maspik_ai_metrics_record( $sent_delta = 0, $spam_delta = 0 ) {
+    if ( ( (int) $sent_delta ) === 0 && ( (int) $spam_delta ) === 0 ) {
+        return;
+    }
+    if ( ! maspik_table_exists() ) {
+        return;
+    }
+    $metrics = maspik_get_settings( 'maspik_ai_metrics' );
+    if ( ! is_array( $metrics ) ) {
+        $metrics = array( 'by_month' => array(), 'total_checks' => 0, 'total_spam' => 0 );
+    }
+    if ( ! isset( $metrics['by_month'] ) || ! is_array( $metrics['by_month'] ) ) {
+        $metrics['by_month'] = array();
+    }
+    $metrics['total_checks'] = isset( $metrics['total_checks'] ) ? (int) $metrics['total_checks'] : 0;
+    $metrics['total_spam']   = isset( $metrics['total_spam'] ) ? (int) $metrics['total_spam'] : 0;
+
+    $ym = date( 'Ym' );
+    if ( ! isset( $metrics['by_month'][ $ym ] ) || ! is_array( $metrics['by_month'][ $ym ] ) ) {
+        $metrics['by_month'][ $ym ] = array( 'checks' => 0, 'spam' => 0 );
+    }
+    $sent_delta = (int) $sent_delta;
+    $spam_delta = (int) $spam_delta;
+    $metrics['by_month'][ $ym ]['checks'] = (int) $metrics['by_month'][ $ym ]['checks'] + $sent_delta;
+    $metrics['by_month'][ $ym ]['spam']   = (int) $metrics['by_month'][ $ym ]['spam'] + $spam_delta;
+    $metrics['total_checks'] += $sent_delta;
+    $metrics['total_spam']   += $spam_delta;
+
+    $metrics['by_month'] = array_slice( $metrics['by_month'], -12, 12, true );
+    maspik_save_settings( 'maspik_ai_metrics', $metrics );
 }
 
 // Set default values for various settings
@@ -2136,3 +2386,726 @@ function maspik_is_contains_emoji($text) {
     return preg_match($pattern, $text) === 1;
 }
 
+// Add this to your functions.php or relevant file
+function maspik_handle_reset_settings() {
+
+    // Verify nonce
+    if (!isset($_POST['nonce'])) {
+        //error_log('Maspik reset - Nonce not set in request');
+        wp_send_json_error(array('message' => __('Security check failed - nonce not set', 'contact-forms-anti-spam')));
+        return;
+    }
+
+    if (!wp_verify_nonce($_POST['nonce'], 'maspik_save_settings_action')) {
+        //error_log('Maspik reset - Nonce verification failed for action: maspik_save_settings_action');
+        wp_send_json_error(array('message' => __('Security check failed - invalid nonce', 'contact-forms-anti-spam')));
+        return;
+    }
+
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(array('message' => __('You do not have permission to perform this action', 'contact-forms-anti-spam')));
+        return;
+    }
+
+    global $wpdb;
+    $tables = array(
+       // Only drop the maspik_options table, not the spam_logs table
+       // $wpdb->prefix . 'maspik_spam_logs',
+        $wpdb->prefix . 'maspik_options'
+    );
+
+    // Drop tables
+    foreach ($tables as $table) {
+        $wpdb->query("DROP TABLE IF EXISTS $table");
+    }
+
+    // Delete all plugin options
+    $options = array(
+        'maspik_run_once',
+        'maspik_spam_key',
+        'spamapi'
+    );
+
+    foreach ($options as $option) {
+        delete_option($option);
+    }
+
+    // Create tables first
+   // create_maspik_log_table();
+    create_maspik_table();
+
+    // Set default settings
+    maspik_save_default_values();
+
+    wp_send_json_success(array('message' => __('Settings reset successfully', 'contact-forms-anti-spam')));
+}
+add_action('wp_ajax_maspik_reset_settings', 'maspik_handle_reset_settings');
+
+
+function maspik_handle_load_template() {
+    // Verify nonce
+    if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'maspik_save_settings_action')) {
+        wp_send_json_error(['message' => 'Security check failed']);
+        return;
+    }
+
+    // Verify user permissions
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error(['message' => 'Permission denied']);
+        return;
+    }
+    global $MASPIK_TEMPLATES;
+    $template_type = sanitize_text_field($_POST['template_type']);
+    $template_settings = isset(MASPIK_TEMPLATES[$template_type]) ? MASPIK_TEMPLATES[$template_type] : false;
+
+    if (!$template_settings) {
+        wp_send_json_error(['message' => 'Invalid template type']);
+        return;
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'maspik_options';
+    $success = true;
+    $messages = [];
+
+    // Begin transaction
+    $wpdb->query('START TRANSACTION');
+
+    try {
+        // Delete existing settings
+        //$wpdb->query("DELETE FROM $table");
+
+        // Merge textarea_blacklist into text_blacklist if both exist in template
+        if (isset($template_settings['textarea_blacklist']) && !empty($template_settings['textarea_blacklist'])) {
+            $text_blacklist = isset($template_settings['text_blacklist']) ? $template_settings['text_blacklist'] : '';
+            $textarea_blacklist = $template_settings['textarea_blacklist'];
+            
+            // Convert both to arrays
+            $text_array = !empty($text_blacklist) ? efas_makeArray($text_blacklist) : array();
+            $textarea_array = efas_makeArray($textarea_blacklist);
+            
+            // Merge arrays, removing duplicates (case-insensitive)
+            foreach ($textarea_array as $item) {
+                $item_trimmed = trim($item);
+                if (!empty($item_trimmed)) {
+                    // Check if item already exists (case-insensitive)
+                    $exists = false;
+                    foreach ($text_array as $existing_item) {
+                        if (strtolower(trim($existing_item)) === strtolower($item_trimmed)) {
+                            $exists = true;
+                            break;
+                        }
+                    }
+                    if (!$exists) {
+                        $text_array[] = $item_trimmed;
+                    }
+                }
+            }
+            
+            // Update template settings
+            $template_settings['text_blacklist'] = implode("\n", $text_array);
+            // Remove textarea_blacklist from template settings
+            unset($template_settings['textarea_blacklist']);
+        }
+
+        // Insert new template settings
+        foreach ($template_settings as $key => $value) {
+            // Skip textarea_blacklist if it still exists (shouldn't happen after merge above)
+            if ($key === 'textarea_blacklist') {
+                continue;
+            }
+            
+            $result = $wpdb->replace(
+                $table,
+                array(
+                    'option_name' => $key,
+                    'option_value' => $value
+                ),
+                array('%s', '%s')
+            );
+
+            if ($result === false) {
+                throw new Exception("Failed to replace setting: $key");
+            }
+        }
+
+        // Commit transaction
+        $wpdb->query('COMMIT');
+        wp_send_json_success(['message' => 'Template loaded successfully']);
+
+    } catch (Exception $e) {
+        // Rollback on error
+        $wpdb->query('ROLLBACK');
+        wp_send_json_error([
+            'message' => 'Failed to load template',
+            'error' => $e->getMessage()
+        ]);
+    }
+}
+add_action('wp_ajax_maspik_load_template', 'maspik_handle_load_template');
+
+function maspik_enqueue_admin_scripts() {
+    // Check if we're on the spam log page
+    if (isset($_GET['page']) && $_GET['page'] == 'maspik-log.php') {
+        wp_enqueue_script('maspik-spamlog', plugin_dir_url(__FILE__) . '../admin/js/maspik-spamlog.js', array('jquery'), MASPIK_VERSION, true);
+        
+        wp_localize_script('maspik-spamlog', 'maspikAdmin', array(
+            'nonce'    => wp_create_nonce('maspik_delete_action'),
+            // Provide both keys for compatibility; JS will prefer ajax_url
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'ajaxurl'  => admin_url('admin-ajax.php'),
+        ));
+    }
+}
+add_action('admin_enqueue_scripts', 'maspik_enqueue_admin_scripts');
+
+// Check if the current version is the latest version
+function maspik_check_version_status() {
+    // Get the transient first
+    $version_info = get_transient('maspik_version_info');
+    
+    if (false === $version_info) {
+        // If no transient, check the WordPress.org API
+        $response = wp_remote_get(
+            'https://api.wordpress.org/plugins/info/1.0/contact-forms-anti-spam.json'
+        );
+
+        if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+            $data = json_decode(wp_remote_retrieve_body($response));
+            if ($data && isset($data->version)) {
+                $version_info = array(
+                    'latest_version' => $data->version,
+                    'is_latest' => version_compare(MASPIK_VERSION, $data->version, '>=')
+                    //'is_latest' => version_compare('2.2.2', $data->version, '>=')
+                );
+                // Cache for 12 hours
+                set_transient('maspik_version_info', $version_info, 12 * HOUR_IN_SECONDS);
+            }
+        }
+    }
+
+    // Default values if API check fails
+    if (!$version_info) {
+        $version_info = array(
+            'latest_version' => MASPIK_VERSION,
+            'is_latest' => true
+        );
+    }
+
+    return $version_info;
+}
+
+/**
+ * AJAX handler for generating new AI client secret
+ */
+function maspik_handle_generate_ai_secret() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'maspik_ajax_nonce')) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
+    
+    // Check user capabilities
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    try {
+        // Generate new secret
+        $new_secret = maspik_generate_ai_client_secret();
+        
+        wp_send_json_success([
+            'secret' => $new_secret,
+            'message' => 'New secret generated successfully'
+        ]);
+        
+    } catch (Exception $e) {
+        wp_send_json_error('Failed to generate secret: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_maspik_generate_ai_secret', 'maspik_handle_generate_ai_secret');
+
+/**
+ * AJAX handler for clearing AI logs
+ */
+function maspik_handle_clear_ai_logs() {
+    // Verify nonce
+    if ( !wp_verify_nonce($_POST['nonce'], 'maspik_clear_ai_logs') ) {
+        wp_die('Security check failed');
+    }
+    
+    // Check user capabilities
+    if ( !current_user_can('manage_options') ) {
+        wp_die('Insufficient permissions');
+    }
+    
+    // Clear AI logs
+    $cleared = maspik_save_settings('maspik_ai_logs', []);
+    
+    if ( $cleared ) {
+        wp_send_json_success('AI logs cleared successfully');
+    } else {
+        wp_send_json_error('Failed to clear AI logs');
+    }
+}
+add_action('wp_ajax_maspik_clear_ai_logs', 'maspik_handle_clear_ai_logs');
+
+/**
+ * Merge textarea_blacklist into text_blacklist
+ * This function runs once on admin_init to migrate existing data
+ */
+function maspik_merge_textarea_blacklist() {
+    // Check if migration has already been done
+    $migration_done = get_option('maspik_blacklist_merged', false);
+    if ($migration_done) {
+        return;
+    }
+
+    // Get current values
+    $text_blacklist = maspik_get_settings('text_blacklist');
+    $textarea_blacklist = maspik_get_settings('textarea_blacklist');
+
+    // Check if textarea_blacklist has content
+    if (!empty($textarea_blacklist)) {
+        // Convert both to arrays
+        $text_array = !empty($text_blacklist) ? efas_makeArray($text_blacklist) : array();
+        $textarea_array = efas_makeArray($textarea_blacklist);
+
+        // Merge arrays, removing duplicates (case-insensitive)
+        $merged_array = $text_array;
+        foreach ($textarea_array as $item) {
+            $item_trimmed = trim($item);
+            if (!empty($item_trimmed)) {
+                // Check if item already exists (case-insensitive)
+                $exists = false;
+                foreach ($merged_array as $existing_item) {
+                    if (strtolower(trim($existing_item)) === strtolower($item_trimmed)) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (!$exists) {
+                    $merged_array[] = $item_trimmed;
+                }
+            }
+        }
+
+        // Convert back to newline-separated string
+        $merged_string = implode("\n", $merged_array);
+
+        // Save merged content to text_blacklist
+        maspik_save_settings('text_blacklist', $merged_string);
+
+        // Set flag to show notice
+        update_option('maspik_blacklist_merge_notice', true);
+    }
+
+    // Mark migration as done
+    update_option('maspik_blacklist_merged', time());
+}
+add_action('admin_init', 'maspik_merge_textarea_blacklist', 1);
+
+/**
+ * Matrix defaults live in $MASPIK_DEFAULT_SETTINGS (new installs: Matrix on, API mode 2 — IP only).
+ * No auto-migration on plugin update; existing sites keep their saved options.
+ */
+function maspik_enable_matrix_by_default() {
+    return;
+}
+add_action('admin_init', 'maspik_enable_matrix_by_default', 2);
+
+
+/**
+ * Show admin notice informing users that Maspik Matrix is now enabled.
+ *
+ * Shown when Matrix was auto-enabled, notice not dismissed, and within ~30 days.
+ */
+function maspik_show_matrix_enabled_notice() {
+    $notice_set = get_option('maspik_matrix_enabled_notice', false);
+    if (!$notice_set) {
+        return;
+    }
+    if (get_option('maspik_matrix_enabled_notice_dismissed', false)) {
+        return;
+    }
+    
+    $ai_enabled = efas_get_spam_api('maspik_ai_enabled', 'bool');
+    
+    // Only show notice if Matrix is enabled
+    if (!$ai_enabled) {
+        delete_option('maspik_matrix_enabled_notice');
+        return;
+    }
+    
+    // Only show notice if it was auto-enabled (check flag in maspik table)
+    $was_auto_enabled = maspik_get_settings('maspik_matrix_auto_enabled');
+    if (!$was_auto_enabled) {
+        delete_option('maspik_matrix_enabled_notice');
+        return;
+    }
+    
+    $set_at = is_numeric($notice_set) ? (int) $notice_set : 0;
+    if ($set_at && (time() - $set_at) > 30 * DAY_IN_SECONDS) {
+        delete_option('maspik_matrix_enabled_notice');
+        return;
+    }
+
+    $settings_url = admin_url('admin.php?page=maspik');
+    $spam_log_url = admin_url('admin.php?page=maspik-log.php');
+    ?>
+    <div class="notice notice-success is-dismissible maspik-matrix-enabled-notice" style="position: relative;">
+        <p>
+            <strong><?php esc_html_e('Maspik', 'contact-forms-anti-spam'); ?>:</strong>
+            <?php esc_html_e('Maspik Matrix is now enabled by default for better spam protection. You can turn it off from the Maspik settings page if needed.', 'contact-forms-anti-spam'); ?>
+        </p>
+        <p>
+            <a href="<?php echo esc_url($settings_url); ?>" class="button button-primary">
+                <?php esc_html_e('Go to Maspik settings', 'contact-forms-anti-spam'); ?>
+            </a>
+            <a href="<?php echo esc_url($spam_log_url); ?>" class="button">
+                <?php esc_html_e('Check Spam Log', 'contact-forms-anti-spam'); ?>
+            </a>
+            <button type="button" class="button maspik-matrix-notice-dismiss">
+                <?php esc_html_e('Dismiss', 'contact-forms-anti-spam'); ?>
+            </button>
+        </p>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.maspik-matrix-enabled-notice .notice-dismiss, .maspik-matrix-enabled-notice .maspik-matrix-notice-dismiss', function(e) {
+            e.preventDefault();
+            var $notice = $('.maspik-matrix-enabled-notice');
+            $notice.slideUp();
+            $.post(ajaxurl, {
+                action: 'maspik_dismiss_matrix_enabled_notice',
+                nonce: '<?php echo wp_create_nonce('maspik_dismiss_matrix_enabled_notice'); ?>'
+            });
+        });
+    });
+    </script>
+    <?php
+}
+add_action('admin_notices', 'maspik_show_matrix_enabled_notice');
+
+/**
+ * AJAX handler to dismiss the Maspik Matrix enabled notice (permanent).
+ */
+function maspik_dismiss_matrix_enabled_notice_handler() {
+    check_ajax_referer('maspik_dismiss_matrix_enabled_notice', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error();
+        return;
+    }
+    update_option('maspik_matrix_enabled_notice_dismissed', true);
+    delete_option('maspik_matrix_enabled_notice');
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_dismiss_matrix_enabled_notice', 'maspik_dismiss_matrix_enabled_notice_handler');
+
+/**
+ * Show admin notice when MASPIK Matrix is disabled (visible in admin panel / dashboard).
+ */
+function maspik_show_matrix_disabled_notice() {
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+    if ( get_option( 'maspik_matrix_disabled_notice_dismissed', false ) ) {
+        return;
+    }
+    $ai_effective = efas_get_spam_api( 'maspik_ai_enabled', 'bool' );
+    if ( $ai_effective ) {
+        return;
+    }
+    $settings_url = admin_url( 'admin.php?page=maspik' );
+    ?>
+    <div class="notice notice-warning is-dismissible maspik-matrix-disabled-admin-notice" style="position: relative;">
+        <p>
+            <strong><?php esc_html_e( 'MASPIK:', 'contact-forms-anti-spam' ); ?></strong>
+            <?php esc_html_e( 'MASPIK Matrix is currently disabled, so advanced spam detection (including IP reputation, behavior patterns, and AI scoring) is not active. Enable it in settings for stronger protection.', 'contact-forms-anti-spam' ); ?>
+        </p>
+        <p>
+            <a href="<?php echo esc_url( $settings_url ); ?>" class="button button-primary"><?php esc_html_e( 'Go to Maspik settings', 'contact-forms-anti-spam' ); ?></a>
+            <button type="button" class="button button-small maspik-matrix-disabled-notice-dismiss" style="margin-left: 0.5em;"><?php esc_html_e( "Don't show again", 'contact-forms-anti-spam' ); ?></button>
+        </p>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.maspik-matrix-disabled-admin-notice .maspik-matrix-disabled-notice-dismiss', function(e) {
+            e.preventDefault();
+            var $notice = $('.maspik-matrix-disabled-admin-notice');
+            $notice.slideUp();
+            $.post(ajaxurl, {
+                action: 'maspik_dismiss_matrix_disabled_notice',
+                nonce: '<?php echo esc_js( wp_create_nonce( 'maspik_dismiss_matrix_disabled_notice' ) ); ?>'
+            });
+        });
+    });
+    </script>
+    <?php
+}
+add_action( 'admin_notices', 'maspik_show_matrix_disabled_notice', 11 );
+
+/**
+ * AJAX handler to dismiss the "Matrix disabled" admin notice (permanent).
+ */
+function maspik_dismiss_matrix_disabled_notice_handler() {
+    check_ajax_referer( 'maspik_dismiss_matrix_disabled_notice', 'nonce' );
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error();
+        return;
+    }
+    update_option( 'maspik_matrix_disabled_notice_dismissed', true );
+    wp_send_json_success();
+}
+add_action( 'wp_ajax_maspik_dismiss_matrix_disabled_notice', 'maspik_dismiss_matrix_disabled_notice_handler' );
+
+/**
+ * Returns the current What's New popup version. Bump MASPIK_WHATS_NEW_VERSION in consts.php when updating the popup content.
+ */
+function maspik_whats_new_version() {
+    return defined('MASPIK_WHATS_NEW_VERSION') ? MASPIK_WHATS_NEW_VERSION : '1';
+}
+
+/**
+ * AJAX handler: mark What's New popup as seen for the current user (so it won't auto-open again until version is bumped).
+ */
+function maspik_whats_new_seen_handler() {
+    if (!isset($_POST['nonce']) || !wp_verify_nonce(sanitize_text_field($_POST['nonce']), 'maspik_whats_new_seen')) {
+        wp_send_json_error();
+        return;
+    }
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error();
+        return;
+    }
+    $version = isset($_POST['version']) ? sanitize_text_field($_POST['version']) : '';
+    if ($version === '') {
+        wp_send_json_error();
+        return;
+    }
+    update_user_meta(get_current_user_id(), 'maspik_whats_new_seen_version', $version);
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_whats_new_seen', 'maspik_whats_new_seen_handler');
+
+/**
+ * AJAX handler to enable Maspik Matrix (AI) from the rollout notice.
+ */
+function maspik_enable_matrix_from_notice_handler() {
+    check_ajax_referer('maspik_enable_matrix_from_notice', 'nonce');
+
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error();
+        return;
+    }
+
+    // Turn on Maspik Matrix for this site.
+    maspik_save_settings('maspik_ai_enabled', '1');
+
+    // Also stop showing the notice.
+    update_option('maspik_matrix_enabled_notice_dismissed', true);
+    delete_option('maspik_matrix_enabled_notice');
+
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_enable_matrix_from_notice', 'maspik_enable_matrix_from_notice_handler');
+
+/**
+ * Dashboard widget: nudge to enable Maspik Matrix when it's off.
+ * Can be hidden forever by the user.
+ */
+function maspik_matrix_dashboard_widget_render() {
+    // This function only renders when Matrix is off (widget is only added when off)
+    // Double-check: if somehow Matrix got enabled (site or dashboard), don't render
+    $ai_enabled = efas_get_spam_api('maspik_ai_enabled', 'bool');
+    if ($ai_enabled) {
+        return;
+    }
+    $settings_url = admin_url('admin.php?page=maspik');
+    $nonce_activate = wp_create_nonce('maspik_enable_matrix_from_notice');
+    $nonce_hide    = wp_create_nonce('maspik_hide_matrix_widget');
+    ?>
+    <p><?php esc_html_e('Maspik Matrix (spam protection engine) is off. Turn it on for much stronger spam and bot blocking.', 'contact-forms-anti-spam'); ?></p>
+    <p>
+        <button type="button" class="button button-primary maspik-dashboard-widget-enable-matrix" data-nonce="<?php echo esc_attr($nonce_activate); ?>">
+            <?php esc_html_e('Enable Maspik Matrix', 'contact-forms-anti-spam'); ?>
+        </button>
+        <a href="<?php echo esc_url($settings_url); ?>" class="button"><?php esc_html_e('Open settings', 'contact-forms-anti-spam'); ?></a>
+    </p>
+    <p class="maspik-widget-hide-wrap" style="margin-bottom:0;">
+        <a href="#" class="maspik-dashboard-widget-hide-forever" data-nonce="<?php echo esc_attr($nonce_hide); ?>"><?php esc_html_e('Hide this widget forever', 'contact-forms-anti-spam'); ?></a>
+    </p>
+    <script>
+    jQuery(document).ready(function($) {
+        $('.maspik-dashboard-widget-enable-matrix').on('click', function() {
+            var $w = $('#maspik_matrix_widget').closest('.postbox');
+            var n = $(this).data('nonce');
+            $(this).prop('disabled', true);
+            $.post(ajaxurl, { action: 'maspik_enable_matrix_from_notice', nonce: n }).done(function() {
+                $w.find('.inside').html('<p><?php echo esc_js(__('Maspik Matrix is enabled. Your forms are protected.', 'contact-forms-anti-spam')); ?></p>');
+            }).fail(function() { $('.maspik-dashboard-widget-enable-matrix').prop('disabled', false); });
+        });
+        $('.maspik-dashboard-widget-hide-forever').on('click', function(e) {
+            e.preventDefault();
+            var $w = $('#maspik_matrix_widget').closest('.postbox');
+            $.post(ajaxurl, { action: 'maspik_hide_matrix_widget', nonce: $(this).data('nonce') }).done(function() {
+                $w.slideUp();
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+/**
+ * Dashboard widget: Matrix is on with IP-only mode — suggest Full Matrix (mode 4) for stronger blocking.
+ */
+function maspik_matrix_dashboard_widget_render_full_mode_nudge() {
+    $ai_enabled = efas_get_spam_api('maspik_ai_enabled', 'bool');
+    if ( ! $ai_enabled || ! function_exists( 'maspik_matrix_api_mode_int' ) || maspik_matrix_api_mode_int() !== 2 ) {
+        return;
+    }
+    $settings_matrix_url = admin_url( 'admin.php?page=maspik#maspik-matrix-section' );
+    $nonce_hide          = wp_create_nonce( 'maspik_hide_matrix_full_mode_nudge' );
+    ?>
+    <p><?php esc_html_e( 'Maspik Matrix is on in a IP-check mode: only the visitor IP is checked — Its a minimal check.', 'contact-forms-anti-spam' ); ?></p>
+    <p><?php esc_html_e( 'If you need more protection, open Maspik settings and switch Matrix to “Full Matrix analysis” (full check). It catches far more spam because it also analyzes submission content with our full pipeline. (Data not stored!)', 'contact-forms-anti-spam' ); ?></p>
+    <p>
+        <a href="<?php echo esc_url( $settings_matrix_url ); ?>" class="button button-primary"><?php esc_html_e( 'Choose Full Matrix in settings', 'contact-forms-anti-spam' ); ?></a>
+    </p>
+    <p class="maspik-widget-hide-wrap" style="margin-bottom:0;">
+        <a href="#" class="maspik-dashboard-widget-hide-full-mode-nudge" data-nonce="<?php echo esc_attr( $nonce_hide ); ?>"><?php esc_html_e( 'Hide this reminder', 'contact-forms-anti-spam' ); ?></a>
+    </p>
+    <script>
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.maspik-dashboard-widget-hide-full-mode-nudge', function(e) {
+            e.preventDefault();
+            var $w = $('#maspik_matrix_full_mode_widget').closest('.postbox');
+            $.post(ajaxurl, { action: 'maspik_hide_matrix_full_mode_nudge', nonce: $(this).data('nonce') }).done(function() {
+                $w.slideUp();
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+function maspik_add_matrix_dashboard_widget() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+    $ai_enabled = efas_get_spam_api('maspik_ai_enabled', 'bool');
+
+    if (!$ai_enabled) {
+        if (!get_option('maspik_matrix_widget_hidden', false)) {
+            wp_add_dashboard_widget(
+                'maspik_matrix_widget',
+                __('Maspik – Enable Matrix', 'contact-forms-anti-spam'),
+                'maspik_matrix_dashboard_widget_render'
+            );
+        }
+        return;
+    }
+
+    if (function_exists('maspik_matrix_api_mode_int') && maspik_matrix_api_mode_int() === 2 && !get_option('maspik_matrix_full_mode_nudge_hidden', false)) {
+        wp_add_dashboard_widget(
+            'maspik_matrix_full_mode_widget',
+            __('Maspik – Catch more spam', 'contact-forms-anti-spam'),
+            'maspik_matrix_dashboard_widget_render_full_mode_nudge'
+        );
+    }
+}
+add_action('wp_dashboard_setup', 'maspik_add_matrix_dashboard_widget');
+
+/**
+ * AJAX: hide the Maspik Matrix dashboard widget forever.
+ */
+function maspik_hide_matrix_widget_handler() {
+    check_ajax_referer('maspik_hide_matrix_widget', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error();
+        return;
+    }
+    update_option('maspik_matrix_widget_hidden', true);
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_hide_matrix_widget', 'maspik_hide_matrix_widget_handler');
+
+/**
+ * AJAX: hide the “switch to Full Matrix” dashboard reminder.
+ */
+function maspik_hide_matrix_full_mode_nudge_handler() {
+    check_ajax_referer('maspik_hide_matrix_full_mode_nudge', 'nonce');
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error();
+        return;
+    }
+    update_option('maspik_matrix_full_mode_nudge_hidden', true);
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_hide_matrix_full_mode_nudge', 'maspik_hide_matrix_full_mode_nudge_handler');
+function maspik_show_blacklist_merge_notice() {
+    // Check if we should show the notice
+    $show_notice = get_option('maspik_blacklist_merge_notice', false);
+    if (!$show_notice) {
+        return;
+    }
+
+    // Only show on Maspik admin pages
+    if (!isset($_GET['page']) || strpos($_GET['page'], 'maspik') === false) {
+        return;
+    }
+
+    // Check if notice was dismissed
+    $dismissed = get_transient('maspik_blacklist_merge_notice_dismissed');
+    if ($dismissed) {
+        return;
+    }
+
+    ?>
+    <div class="notice notice-success is-dismissible maspik-blacklist-merge-notice">
+        <p>
+            <strong><?php esc_html_e('Maspik: Blacklist Fields Merged', 'contact-forms-anti-spam'); ?></strong><br>
+            <?php esc_html_e('The textarea blacklist field has been merged into the text blacklist field. All keywords from the textarea field have been added to the text field, and both fields now use the same unified blacklist. You can manage all keywords in the "Text Fields" section.', 'contact-forms-anti-spam'); ?>
+        </p>
+    </div>
+    <script>
+    jQuery(document).ready(function($) {
+        $(document).on('click', '.maspik-blacklist-merge-notice .notice-dismiss', function() {
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'maspik_dismiss_blacklist_merge_notice',
+                    nonce: '<?php echo wp_create_nonce('maspik_dismiss_blacklist_merge_notice'); ?>'
+                }
+            });
+        });
+    });
+    </script>
+    <?php
+}
+add_action('admin_notices', 'maspik_show_blacklist_merge_notice');
+
+/**
+ * AJAX handler to dismiss the blacklist merge notice
+ */
+function maspik_dismiss_blacklist_merge_notice_handler() {
+    check_ajax_referer('maspik_dismiss_blacklist_merge_notice', 'nonce');
+    
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Permission denied');
+        return;
+    }
+
+    // Set transient to dismiss notice for 30 days
+    set_transient('maspik_blacklist_merge_notice_dismissed', true, 30 * DAY_IN_SECONDS);
+    
+    // Clear the flag
+    delete_option('maspik_blacklist_merge_notice');
+    
+    wp_send_json_success();
+}
+add_action('wp_ajax_maspik_dismiss_blacklist_merge_notice', 'maspik_dismiss_blacklist_merge_notice_handler');

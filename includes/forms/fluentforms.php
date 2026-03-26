@@ -14,26 +14,44 @@ function maspik_validate_fluentform_general( $errors, $formData, $form, $fields)
   // ip
   $ip =  maspik_get_real_ip();
 
-// For HP
-parse_str($_POST['data'], $parsed_data);
-$extracted_data = array(
-    'Maspik-exactTime' => isset($parsed_data['Maspik-exactTime']) ? $parsed_data['Maspik-exactTime'] : false,
-    'Maspik-currentYear' => isset($parsed_data['Maspik-currentYear']) ? $parsed_data['Maspik-currentYear'] : false,
-    'maspik_spam_key' => isset($parsed_data['maspik_spam_key']) ? $parsed_data['maspik_spam_key'] : false,
-    'full-name-maspik-hp' => isset($parsed_data['full-name-maspik-hp']) ? $parsed_data['full-name-maspik-hp'] : false
-);
+  // Parse the query string data from Fluent Forms
+  $parsed_data = array();
+  if (isset($_POST['data']) && is_string($_POST['data'])) {
+      parse_str($_POST['data'], $parsed_data);
+      // Drop top-level keys whose name contains these fragments (substring, case-insensitive).
+      $skip_key_fragments = array( 'hidden', 'radio', 'checkbox', 'select' );
+      $parsed_data = array_filter(
+          $parsed_data,
+          function ( $value, $key ) use ( $skip_key_fragments ) {
+              $key = (string) $key;
+              foreach ( $skip_key_fragments as $frag ) {
+                  if ( stripos( $key, $frag ) !== false ) {
+                      return false;
+                  }
+              }
+              return true;
+          },
+          ARRAY_FILTER_USE_BOTH
+      );
+  }
+
+  // Remove fields that start with underscore
+  $parsed_data = array_filter($parsed_data, function($value, $key) {
+      return strpos($key, '_') !== 0;
+  }, ARRAY_FILTER_USE_BOTH);
 
 
-  // Country IP Check 
-  $GeneralCheck = GeneralCheck($ip,$spam,$reason,$extracted_data,"fluentforms");
+  // General check (Country/IP, honeypot, spam key, AI Matrix, etc.)
+  // Use parsed_data both as full post data and as content fields base for AI.
+  $GeneralCheck = GeneralCheck($ip,$spam,$reason,$parsed_data,"fluentforms", $parsed_data);
   $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false ;
   $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;
   $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false ;
-  $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
+  $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false ;
+  $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
 
-   
   if ( $spam) {
-    efas_add_to_log($type = "General",$reason, $_POST, "Fluent Forms", $message,  $spam_val );
+    efas_add_to_log($type, $reason, $parsed_data, "Fluent Forms", $message, $spam_val);
     $errors['spam'] = cfas_get_error_text($message);
   }
 return $errors;
@@ -78,7 +96,7 @@ function maspik_validate_fluentforms_email($errorMessage, $field, $formData, $fi
 
    if( $spam ) {
       $error_message = cfas_get_error_text();
-      efas_add_to_log($type = "email","Email $field_value is block $spam" , $formData, "Fluent Forms", "emails_blacklist", $spam_val);
+      efas_add_to_log($type = "email", $spam, $formData, "Fluent Forms", "emails_blacklist", $spam_val);
       $errorMessage = $error_message;
    }
    return $errorMessage;
@@ -146,29 +164,23 @@ add_filter('fluentform/rendering_form', function($form){
     
     add_filter("fluentform/rendering_field_html_$last_element", function ($html, $data, $form) {
         
-        if ( maspik_get_settings('maspikHoneypot') || maspik_get_settings('maspikTimeCheck') || maspik_get_settings('maspikYearCheck') ) {
+        if ( efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool') || maspik_get_settings('maspikYearCheck') ) {
             $custom_html = "";
 
-            if (maspik_get_settings('maspikHoneypot')) {
+            if (efas_get_spam_api('maspikHoneypot', 'bool')) {
                 $custom_html .= '<div class="ff-el-group maspik-field">
-                    <label for="full-name-maspik-hp" class="ff-el-input--label">Leave this field empty</label>
-                    <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="full-name-maspik-hp" id="full-name-maspik-hp" class="ff-el-form-control" placeholder="Leave this field empty">
+                    <label for="full-name-maspik-hp" class="ff-el-input--label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                    <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="full-name-maspik-hp" id="full-name-maspik-hp" class="ff-el-form-control" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
                 </div>';
             }
 
             if (maspik_get_settings('maspikYearCheck')) {
                 $custom_html .= '<div class="ff-el-group maspik-field">
-                    <label for="Maspik-currentYear" class="ff-el-input--label">Leave this field empty</label>
-                    <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-currentYear" id="Maspik-currentYear" class="ff-el-form-control" placeholder="">
+                    <label for="Maspik-currentYear" class="ff-el-input--label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                    <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="ff-el-form-control" placeholder="">
                 </div>';
             }
 
-            if (maspik_get_settings('maspikTimeCheck')) {
-                $custom_html .= '<div class="ff-el-group maspik-field">
-                    <label for="Maspik-exactTime" class="ff-el-input--label">Leave this field empty</label>
-                    <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-exactTime" id="Maspik-exactTime" class="ff-el-form-control" placeholder="">
-                </div>';
-            }
          return   $html . $custom_html;
            
         }

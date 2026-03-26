@@ -1,132 +1,183 @@
 <?php
-/**
- * This function checks the custom form submissions for spam.
- * 
- * Filters:
- * - 'maspik_should_check_form': Controls whether the form should be processed.
- * - 'maspik_nonce_action': Allows customization of the nonce action.
- * - 'maspik_nonce_field': Allows customization of the nonce field name.
- * - 'maspik_post_text_field': Allows customization of the text field name.
- * - 'maspik_post_email_field': Allows customization of the email field name.
- * - 'maspik_post_phone_field': Allows customization of the phone field name.
- * - 'maspik_post_textarea_field': Allows customization of the textarea field name.
- * 
- * Example usage in your form:
- * 
- * <form method="post">
- *     <?php 
- *     wp_nonce_field(apply_filters('maspik_nonce_action', 'maspik_custom_form'), 
- *                    apply_filters('maspik_nonce_field', 'maspik_nonce')); 
- *     ?>
- *     <input type="hidden" name="maspik_do_check" value="1">
- *     <input type="text" name="<?php echo apply_filters('maspik_post_text_field', 'text_field'); ?>" placeholder="Text Field">
- *     <input type="email" name="<?php echo apply_filters('maspik_post_email_field', 'email_field'); ?>" placeholder="Email Field">
- *     <input type="text" name="<?php echo apply_filters('maspik_post_phone_field', 'phone_field'); ?>" placeholder="Phone Field">
- *     <textarea name="<?php echo apply_filters('maspik_post_textarea_field', 'textarea_field'); ?>" placeholder="Textarea Field"></textarea>
- *     <button type="submit">Submit</button>
- * </form>
- */
-
-
-
-// Hook into the init action
-add_action('init', 'maspik_custom_form_check');
-
-function maspik_custom_form_check() {
-    // Get the nonce action and field name from filters
-    $nonce_action = apply_filters('maspik_nonce_action', 'maspik_custom_form');
-    $nonce_field = apply_filters('maspik_nonce_field', 'maspik_nonce');
-
-    // Ensure it's a POST request and verify the nonce
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST[$nonce_field]) || !wp_verify_nonce($_POST[$nonce_field], $nonce_action)) {
-        return;
-    }
-
-    // Check if the form should be processed
-    if (!apply_filters('maspik_should_check_form', false)) {
-        return;
-    }
-
-    try {
-        $errors = [];
-        $spam = false;
-        $reason = "";
-
-        // Get IP address
-        $ip = maspik_get_real_ip();
-
-        // Country IP Check (example implementation)
-        $GeneralCheck = GeneralCheck($ip, $spam, $reason,$_POST,"custom");
-        if ($GeneralCheck['spam']) {
-            $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
-            
-            efas_add_to_log("Country/IP", $GeneralCheck['reason'], $_POST, "Custom PHP form", $GeneralCheck['message'],  $spam_val);
-            $errors['ip_country'] = cfas_get_error_text($GeneralCheck['message']);
-        }
-
-        // Check text fields
-        $text_field_key = apply_filters('maspik_post_text_field', 'text_field');
-        if (isset($_POST[$text_field_key])) {
-            $field_value = sanitize_text_field($_POST[$text_field_key]);
-            $validateTextField = validateTextField($field_value);
-            $spam_lbl = isset($validateTextField['label']) ? $validateTextField['label'] : 0 ;
-            $spam_val = isset($validateTextField['option_value']) ? $validateTextField['option_value'] : 0 ;
-            if ($validateTextField['spam']) {
-                efas_add_to_log("text", $validateTextField['reason'], $_POST, "Custom PHP form", $spam_lbl, $spam_val);
-                $errors[$text_field_key] = cfas_get_error_text($validateTextField['message']);
-            }
-        }
-
-        // Check email fields
-        $email_field_key = apply_filters('maspik_post_email_field', 'email_field');
-        if (isset($_POST[$email_field_key])) {
-            $field_value = sanitize_email($_POST[$email_field_key]);
-            $spam = checkEmailForSpam($field_value);
-            $spam_val = $field_value;
-
-            if ($spam) {
-                efas_add_to_log("email", "Email $field_value is blocked", $_POST, "Custom PHP form", "emails_blacklist", $spam_val);
-                $errors[$email_field_key] = 'Invalid email field';
-            }
-        }
-
-        // Check phone fields
-        $phone_field_key = apply_filters('maspik_post_phone_field', 'phone_field');
-        if (isset($_POST[$phone_field_key])) {
-            $field_value = sanitize_text_field($_POST[$phone_field_key]);
-            $checkTelForSpam = checkTelForSpam($field_value);
-            $spam_lbl = isset($checkTelForSpam['label']) ? $checkTelForSpam['label'] : 0 ;
-            $spam_val = isset($checkTelForSpam['option_value']) ? $checkTelForSpam['option_value'] : 0 ;
-
-            if (!$checkTelForSpam['valid']) {
-                efas_add_to_log("tel", $checkTelForSpam['reason'], $_POST, "Custom PHP form", $spam_lbl, $spam_val);
-                $errors[$phone_field_key] = cfas_get_error_text($checkTelForSpam['message']);
-            }
-        }
-
-        // Check textarea fields
-        $textarea_field_key = apply_filters('maspik_post_textarea_field', 'textarea_field');
-        if (isset($_POST[$textarea_field_key])) {
-            $field_value = sanitize_textarea_field($_POST[$textarea_field_key]);
-            $checkTextareaForSpam = checkTextareaForSpam($field_value);
-            $spam_lbl = isset($checkTextareaForSpam['label']) ? $checkTextareaForSpam['label'] : 0 ;
-            $spam_val = isset($checkTextareaForSpam['option_value']) ? $checkTextareaForSpam['option_value'] : 0 ;
-
-            if ($checkTextareaForSpam['spam']) {
-                efas_add_to_log("textarea", $checkTextareaForSpam['reason'], $_POST, "Custom PHP form", $spam_lbl, $spam_val);
-                $errors[$textarea_field_key] = cfas_get_error_text($checkTextareaForSpam['message']);
-            }
-        }
-
-        // If there are any errors, display them or take any appropriate action
-        if (!empty($errors)) {
-            wp_send_json_error(['errors' => $errors]);
-        }
-
-        // If no errors, continue with form processing
-        wp_send_json_success(['message' => 'Form submitted successfully']);
-
-    } catch (Exception $e) {
-        wp_send_json_error(['message' => 'An unexpected error occurred']);
-    }
+// If this file is called directly, abort.
+if ( ! defined( 'WPINC' ) ) {
+    die;
 }
+
+
+/**
+ * Filter to validate form fields for spam
+ * 
+ * Usage example in a theme or plugin, use with caution, contact support if you have any questions
+ * 
+ * // Option 1: Send specific fields
+ * $fields = [
+ *   ['type' => 'text', 'value' => 'John', 'field_name' => 'first_name'],
+ *   ['type' => 'text', 'value' => 'Doe', 'field_name' => 'last_name'],
+ *   ['type' => 'email', 'value' => 'john@example.com', 'field_name' => 'email'],
+ *   ['type' => 'textarea', 'value' => 'Message content', 'field_name' => 'message'],
+ *   ['type' => 'tel', 'value' => '123-456-7890', 'field_name' => 'phone']
+ * 
+ * if in the plugin setting Honeypot Trap, Advance key check , JavaScript check are enabled, you shold send this as well
+ *   ['type' => 'hidden', 'value' => '', 'field_name' => 'Maspik-currentYear'], // this field will need to contain the current year, if not, it will be detected as spam you can add the current year by using with JS or in the php code
+ *   ['type' => 'hidden', 'value' => '2025', 'field_name' => 'full-name-maspik-hp'], // this field will need to be empty, if not, it will be detected as spam
+ *   ['type' => 'hidden', 'value' => 'somerandomkeycomingfromourjs', 'field_name' => 'maspik_spam_key'], // spam key will be filled automatically by maspik JS
+ * ];
+ * 
+ * // Option 2: Send entire $_POST data
+ * $fields = array_map(function($value, $key) {
+ *   return [
+ *     'type' => 'text', // Set appropriate type based on your form fields
+ *     'value' => $value,
+ *     'field_name' => $key
+ *   ];
+ * }, $_POST, array_keys($_POST));
+ * 
+ * please include the human verification field in the $fields array
+ * 
+ * 
+ * $is_spam = apply_filters('maspik_validate_custom_form_fields', false, $fields, 'My Custom Form');
+ * if ($is_spam) {
+ *   // Spam detected by maspik
+ *   $error = [
+ *     'message' => $is_spam['message'],    // Error message to display
+ *     'reason' => $is_spam['reason'],      // Technical reason for spam detection
+ *     'field_type' => $is_spam['field_type'], // Type of field that triggered spam detection
+ *     'field_name' => $is_spam['field_name']  // Name of field that triggered spam detection
+ *   ];
+ *   // Handle error...
+ * }
+ * 
+ * @param bool|array $is_spam Default false, or array with spam details if detected
+ * @param array $fields Array of form fields with 'type', 'value', and optional 'field_name' keys
+ * @param string $form_name Optional form identifier for logging
+ * @return bool|array Returns false if no spam detected, or array with error details if spam detected
+ */
+add_filter('maspik_validate_custom_form_fields', function($is_spam, $fields, $form_name = 'Custom Form') {
+    // If spam was already detected by another filter, return that result
+    if ($is_spam !== false) {
+        return $is_spam;
+    }
+
+    $spam = false;
+    $reason = '';
+    
+    // Convert fields to array if string provided
+    if (!is_array($fields)) {
+        $fields = array(['type' => 'textarea', 'value' => $fields]);
+    }
+
+    // Create $_POST data for compatibility with existing functions
+    $post_data = [];
+    foreach ($fields as $field) {
+        if (isset($field['field_name'])) {
+            $post_data[$field['field_name']] = $field['value'];
+        }
+    }
+
+    // Loop through all fields
+    foreach ($fields as $field) {
+        // Skip if required keys are missing
+        if (!isset($field['type']) || !isset($field['value']) || !isset($field['field_name']) || isset($field['type']) && $field['type'] == 'hidden' ) {
+            continue;
+        }
+
+        $field_value = $field['value'];
+        $field_type = strtolower($field['type']);
+        $field_name = isset($field['field_name']) ? $field['field_name'] : '';
+
+        // Skip empty fields
+        if (empty($field_value)) {
+            continue;
+        }
+
+        switch ($field_type) {
+            case 'text':
+                $validateTextField = validateTextField($field_value);
+                if (isset($validateTextField['spam'])) {
+                    efas_add_to_log("Text", $validateTextField['spam'], $_POST, $form_name, $validateTextField['label'], $validateTextField['option_value']);
+                    return [
+                        'spam' => true,
+                        'message' => cfas_get_error_text($validateTextField['message']),
+                        'reason' => $validateTextField['spam'],
+                        'field_type' => 'text',
+                        'field_name' => $field_name
+                    ];
+                }
+                break;
+
+            case 'email':
+                $spam = checkEmailForSpam($field_value);
+                if ($spam) {
+                    efas_add_to_log("Email", $spam, $_POST, $form_name, $field_name, $field_value);
+                    return [
+                        'spam' => true,
+                        'message' => cfas_get_error_text('emails_blacklist'),
+                        'reason' => $spam,
+                        'field_type' => 'email',
+                        'field_name' => $field_name
+                    ];
+                }
+                break;
+
+            case 'tel':
+                $checkTelForSpam = checkTelForSpam($field_value);
+                if (!isset($checkTelForSpam['valid']) || !$checkTelForSpam['valid']) {
+                    efas_add_to_log("Tel", $checkTelForSpam['reason'], $_POST, $form_name, $field_name, $field_value);
+                    return [
+                        
+                        'spam' => true,
+                        'message' => cfas_get_error_text($checkTelForSpam['message']),
+                        'reason' => $checkTelForSpam['reason'],
+                        'field_type' => 'tel',
+                        'field_name' => $field_name
+                    ];
+                }
+                break;
+
+            case 'textarea':
+                $checkTextareaForSpam = checkTextareaForSpam($field_value);
+                if (isset($checkTextareaForSpam['spam'])) {
+                    efas_add_to_log("Textarea", $checkTextareaForSpam['reason'], $_POST, $form_name, $field_name, $field_value);
+                    return [
+                        'spam' => true,
+                        'message' => cfas_get_error_text($checkTextareaForSpam['message']),
+                        'reason' => $checkTextareaForSpam['spam'],
+                        'field_type' => 'textarea',
+                        'field_name' => $field_name
+                    ];
+                }
+                break;
+        }
+    }
+
+    // General Check
+    $ip = maspik_get_real_ip();
+
+    $hidden_fields = ['maspik_spam_key', 'Maspik-currentYear', 'full-name-maspik-hp'];
+    $hidden_data = array();
+    foreach ($fields as $field) {
+        if (isset($field['field_name']) && in_array($field['field_name'], $hidden_fields)) {
+            $hidden_data[$field['field_name']] = $field['value'];
+        }
+    }
+
+    $GeneralCheck = GeneralCheck($ip, $spam, $reason, $hidden_data, $form_name);
+    
+    if (isset($GeneralCheck['spam']) && $GeneralCheck['spam']) {
+        $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false;
+        $spam_val = isset($GeneralCheck['value']) && $GeneralCheck['value'] ? $GeneralCheck['value'] : false;
+        $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : "General";
+        efas_add_to_log($type, $GeneralCheck['reason'], $_POST, $form_name, $message, $spam_val);
+        return [
+            'spam' => true,
+            'message' => cfas_get_error_text($GeneralCheck['message']),
+            'reason' => $GeneralCheck['reason'],
+            'field_type' => 'general',
+            'field_name' => 'general'
+        ];
+    }
+
+    // No spam detected
+    return false;
+}, 10, 3);

@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", function() {
             updateInputElement("note-name", data.name);
             updateInputElement("note-email", data.email);
             updateInputElement("note-tel", data.tel);
+            updateInputElement("note-url", data.url);
             updateInputElement("note-textarea", data.textarea);
         })
         .catch(error => {
@@ -34,11 +35,21 @@ document.addEventListener("DOMContentLoaded", function() {
     // Function to update input element and its parent based on data value
     function updateInputElement(id, value) {
         var element = document.getElementById(id);
+
+        // Replace asterisks with proper opening and closing <u> tags
+        value = value.replace(/\*!(.*?)!\*/g, '<u>$1</u>'); // New format
+    
         element.innerHTML = value;
-        
+    
         // Toggle "red" class based on whether the value is empty or not
         element.parentElement.classList.toggle("red", value);
     }
+});
+
+
+jQuery(document).ready(function($) {
+
+   
 });
 
 /*document.addEventListener("DOMContentLoaded", function() {

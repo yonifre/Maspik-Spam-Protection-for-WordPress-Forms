@@ -14,11 +14,15 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
     $is_spam = false;
     $error_fields = array();
     $form_data = array_map('sanitize_text_field', $_POST['form_fields'] ?? []);
-    $NeedPageurl = maspik_get_settings( 'NeedPageurl' );   
+    $NeedPageurl = efas_get_spam_api( 'NeedPageurl', 'bool' );
     // Get all form fields
     $form_fields = $record->get( 'fields' );
+    $form_fields = is_array($form_fields) ? $form_fields : array();
     $keys = array_keys($form_fields);
-    $lastKeyId = end($keys);
+    $lastKeyId = !empty($keys) ? end($keys) : '';
+
+    // Collect relevant content fields for AI
+    $content_fields = array();
     
     
     
@@ -47,6 +51,11 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
                     $ajax_handler->add_error($field_id, $error_message);
                     return;
                 }
+
+                // Add to AI content fields if valid
+                if ( ! $spam ) {
+                    $content_fields[ $field_id ] = $field_value;
+                }
                 break;
 
             case 'email':
@@ -56,9 +65,14 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
 
                 if ($spam) {
                     $error_message = cfas_get_error_text("emails_blacklist");
-                    efas_add_to_log($type = "email", "Email $field_value is block $spam", $form_data,"Hello Plus", "emails_blacklist", $spam_val);
+                    efas_add_to_log($type = "email", $spam, $form_data,"Hello Plus", "emails_blacklist", $spam_val);
                     $ajax_handler->add_error($field_id, $error_message);
                     return;
+                }
+
+                // Add to AI content fields if valid
+                if ( ! $spam ) {
+                    $content_fields[ $field_id ] = $field_value;
                 }
                 break;
 
@@ -77,6 +91,11 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
                   $ajax_handler->add_error($field_id, $error_message);
                   return;
                 }
+
+                // Add to AI content fields if valid
+                if ( $valid ) {
+                    $content_fields[ $field_id ] = $field_value;
+                }
                 break;
 
             case 'textarea':
@@ -93,6 +112,11 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
                       $ajax_handler->add_error($field_id, $error_message);
                       return;
                 }
+
+                // Add to AI content fields if valid
+                if ( ! $spam ) {
+                    $content_fields[ $field_id ] = $field_value;
+                }
                 break;
 
             // end
@@ -101,24 +125,20 @@ function maspik_validation_process_hello_plus( $record, $ajax_handler ) {
 
         // General Check
     if(!$spam ){
-        $meta = $record->get_form_meta( [ 'page_url', 'remote_ip' ] );
-        $ip =  $meta['remote_ip']['value'] ? $meta['remote_ip']['value'] : maspik_get_real_ip();
+        $ip = maspik_get_real_ip();
         // Country IP Check 
-        $GeneralCheck = GeneralCheck($ip,$spam,$reason,$_POST,"HelloPlus");
+        $GeneralCheck = GeneralCheck($ip,$spam,$reason,$_POST,"HelloPlus", $content_fields);
         $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false ;
         $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;
         $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false ;
         $error_message = cfas_get_error_text($message);
-        $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
+        $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false ;
+        $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
         if($spam){
-        efas_add_to_log($type = "General",$reason, $form_data,"Hello Plus", $message,  $spam_val);
+        efas_add_to_log($type, $reason, $form_data, "Hello Plus", $message, $spam_val);
         $ajax_handler->add_error( $lastKeyId, $error_message );
         return;
         }
-    }
-
-    if ( efas_get_spam_api( 'NeedPageurl' ) ) {
-        $NeedPageurl = $NeedPageurl ? $NeedPageurl : efas_get_spam_api( 'NeedPageurl', 'bool' );
     }
 
     if ( ! isset( $_POST['referrer'] ) && $NeedPageurl ) {

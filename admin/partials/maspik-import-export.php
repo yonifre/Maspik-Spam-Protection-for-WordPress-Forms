@@ -29,7 +29,7 @@ if ( ! defined( 'WPINC' ) ) {
 
      <div class="maspik-spam-head">
 
-        <h2 class='maspik-header maspik-spam-header'><?php _e('Maspik Import/Export Settings', 'contact-forms-anti-spam'); ?></h2>
+        <h2 class='maspik-header maspik-spam-header'><?php esc_html_e('Maspik Import/Export Settings', 'contact-forms-anti-spam'); ?></h2>
 
             <p>
                 <?php echo esc_html__('Please note that importing/exporting settings will affect most of the Maspik configuration.', 'contact-forms-anti-spam'); ?><br>

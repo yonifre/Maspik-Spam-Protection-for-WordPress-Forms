@@ -3,61 +3,85 @@ jQuery(document).ready(function($) {
     var confirmButton = $('#confirm-delete');
     var cancelButton = $('#cancel-delete');
     var closeButton = $('.close-button');
+    var rowIdToDelete = null;
 
-    
-
-    // Show the modal and set the confirmation message
+    // Show the modal when clicking the delete button
     $(document).on('click', '.spam-delete-button', function() {
         rowIdToDelete = $(this).data('row-id');
-        spamValue = $(this).data('spam-value'); // Assume spam_value is added to data attributes
-        spamType = $(this).data('spam-type');   // Assume spam_type is added to data attributes
-        modal.show()
+        modal.show();
     });
 
-    // Close the modal and execute the callback function if provided
-    function closeModal(callback) {
+    // Close the modal
+    function closeModal() {
         modal.hide();
-        if (callback) {
-            callback();
-        }
+        rowIdToDelete = null;
     }
 
-
+    
     // Confirm delete
     confirmButton.on('click', function() {
-        closeModal(function() {
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: {
-                    action: 'delete_row',
-                    row_id: rowIdToDelete,
-                    nonce: maspikAdmin.nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        alert('Row deleted successfully!');
-                        location.reload(); // Reload the page to reflect changes
-                    } else {
-                        alert('Failed to delete row.');
+        if (!rowIdToDelete) {
+            return;
+        }
+
+        $.ajax({
+            url: maspikAdmin.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'maspik_delete_row',
+                row_id: rowIdToDelete,
+                nonce: maspikAdmin.nonce
+            },
+            beforeSend: function() {
+                $('tr[class*="row-entries"]').each(function() {
+                    if ($(this).find('.spam-delete-button').data('row-id') == rowIdToDelete) {
+                        $(this).css('opacity', '0.5');
                     }
-                },
-                error: function() {
-                    alert('An error occurred.');
+                });
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('tr[class*="row-entries"]').each(function() {
+                        if ($(this).find('.spam-delete-button').data('row-id') == rowIdToDelete) {
+                            $(this).fadeOut(400, function() {
+                                $(this).remove();
+                                if ($('.row-entries').length === 0) {
+                                    $('.log-warp').html("<div class='spam-empty-log'><h4>Empty log</h4></div>");
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    alert(response.data.message || 'Failed to delete row.');
+                    $('tr[class*="row-entries"]').each(function() {
+                        if ($(this).find('.spam-delete-button').data('row-id') == rowIdToDelete) {
+                            $(this).css('opacity', '1');
+                        }
+                    });
                 }
-            });
+            },
+            error: function(xhr, status, error) {
+                console.error('Error details:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                alert('Server error occurred. Check console for details.');
+                $('tr[class*="row-entries"]').each(function() {
+                    if ($(this).find('.spam-delete-button').data('row-id') == rowIdToDelete) {
+                        $(this).css('opacity', '1');
+                    }
+                });
+            },
+            complete: function() {
+                closeModal();
+            }
         });
     });
 
     // Cancel delete
-    cancelButton.on('click', function() {
-        closeModal(); // Close the modal when canceling
-    });
-
-    // Close the modal when the user clicks the close button
-    closeButton.on('click', function() {
-        closeModal();
-    });
+    cancelButton.on('click', closeModal);
+    closeButton.on('click', closeModal);
 
     // Close the modal when clicking outside of it
     $(window).on('click', function(event) {
@@ -72,7 +96,13 @@ jQuery(document).ready(function($) {
     var closeButton = $('.close-button');
 
     // Show the modal and set the confirmation message
+    // Skip if it's a not-spam-action button (handled by the new false positive modal)
     $(document).on('click', '.row-entries:not(.not-a-spam) .filter-delete-button', function() {
+        // Don't show old modal for not-spam-action buttons - they're handled by the false positive modal
+        if ($(this).hasClass('not-spam-action')) {
+            return; // Let the new handler in maspik-log.php handle it
+        }
+        
         rowIdToDelete = $(this).data('row-id');
         spamValue = $(this).data('spam-value'); // Assume spam_value is added to data attributes
         spamType = $(this).data('spam-type');   // Assume spam_type is added to data attributes

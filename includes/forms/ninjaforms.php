@@ -14,6 +14,38 @@ function maspik_if_contains_string_in_array($type, $to_check_array) {
     return false;
 }
 
+/**
+ * Flatten Ninja Forms fields into key => value array
+ *
+ * @param array $nf_fields Raw Ninja Forms fields array
+ * @return array
+ */
+function maspik_ninjaforms_flatten_fields( array $nf_fields ): array {
+	$flat = [];
+	foreach ( $nf_fields as $field ) {
+		if ( ! is_array( $field ) ) {
+			continue;
+		}
+		$key = isset($field['key']) && $field['key'] !== '' ? (string) $field['key'] : ( isset($field['id']) ? (string) $field['id'] : '' );
+		if ( $key === '' ) {
+			continue;
+		}
+		// Skip internal keys
+		if ( in_array( $key, [ 'submit', 'maspik_spam_key' ], true ) ) {
+			continue;
+		}
+		$value = isset($field['value']) ? $field['value'] : '';
+		if ( is_array( $value ) ) {
+			$value = implode( ' ', array_map( 'strval', $value ) );
+		}
+		$value = sanitize_text_field( (string) $value );
+		if ( $value === '' ) {
+			continue;
+		}
+		$flat[$key] = $value;
+	}
+	return $flat;
+}
 
 /**
  * Main Ninja Forms validation functions
@@ -34,21 +66,37 @@ function my_ninja_forms_submit_data( $form_data ) {
     // ip
     $ip =  maspik_get_real_ip();
 
-    // Country IP Check 
-    $GeneralCheck = GeneralCheck($ip,$spam,$reason,false,"ninjaforms");
+    $fields = isset($form_data['fields']) && is_array($form_data['fields']) ? $form_data['fields'] : array();
+    $new_fields = maspik_ninjaforms_flatten_fields($fields);
+
+    // Collect relevant content fields for AI (based on the same key heuristics)
+    $content_fields = array();
+    foreach ( $new_fields as $key => $value ) {
+        if (
+            maspik_if_contains_string_in_array( $key, $to_check_text ) ||
+            maspik_if_contains_string_in_array( $key, $to_check_email ) ||
+            maspik_if_contains_string_in_array( $key, $to_check_tel ) ||
+            maspik_if_contains_string_in_array( $key, $to_check_textarea )
+        ) {
+            $content_fields[ $key ] = $value;
+        }
+    }
+
+    // General check (Country/IP, honeypot, spam key, AI Matrix, etc.)
+    $GeneralCheck = GeneralCheck($ip,$spam,$reason,$new_fields,"ninjaforms", $content_fields);
     $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false ;
     $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;
     $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false ;
-    $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
+    $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false ;
+    $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
 
+    // First field key for error placement (fallback to first array key or 0)
+    $field_keys = array_keys($fields);
+    $first_key = !empty($field_keys) ? $field_keys[0] : 0;
 
-    // Iterate through the first key ID
-    $fields = $form_data['fields'];
-    $first_key = array_keys($fields)[0] ? array_keys($fields)[0] : $form_data['fields'][1];
-
-    if ( $spam) {
-        efas_add_to_log($type = "Country/IP",$reason , $fields, "Ninja Forms", $message,  $spam_val );
-        $form_data['errors']['fields'][$first_key] =  __('General: ', 'contact-forms-anti-spam').cfas_get_error_text($message);
+    if ( $spam ) {
+        efas_add_to_log($type, $reason, $new_fields, "Ninja Forms", $message, $spam_val);
+        $form_data['errors']['fields'][$first_key] = __('General: ', 'contact-forms-anti-spam') . cfas_get_error_text($message);
         return $form_data;
     }
     
@@ -86,7 +134,7 @@ function my_ninja_forms_submit_data( $form_data ) {
             $spam = checkEmailForSpam($field_value);
             $spam_val = $field_value;
             if($spam) {
-                efas_add_to_log($type = "email","Email $field_value is block $spam" , $fields, "Ninja Forms", "emails_blacklist", $spam_val);
+                efas_add_to_log($type = "email", $spam, $fields, "Ninja Forms", "emails_blacklist", $spam_val);
                 $form_data['errors']['fields'][$field_id] = cfas_get_error_text();
                 return $form_data;
             }
@@ -133,27 +181,20 @@ function my_ninja_forms_submit_data( $form_data ) {
 
 function add_custom_html_to_ninja_forms( $form_id, $settings, $form_fields ) {
     
-    if ( maspik_get_settings('maspikHoneypot') || maspik_get_settings('maspikTimeCheck') || maspik_get_settings('maspikYearCheck') ) {
+    if ( efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool') || maspik_get_settings('maspikYearCheck') ) {
         $custom_html = "";
 
-        if (maspik_get_settings('maspikHoneypot')) {
+        if (efas_get_spam_api('maspikHoneypot', 'bool')) {
             $custom_html .= '<div class="ninja-forms-field maspik-field">
-                <label for="full-name-maspik-hp" class="ninja-forms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="full-name-maspik-hp" id="full-name-maspik-hp" class="ninja-forms-field-element" placeholder="Leave this field empty">
+                <label for="full-name-maspik-hp" class="ninja-forms-field-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="full-name-maspik-hp" id="full-name-maspik-hp" class="ninja-forms-field-element" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
             </div>';
         }
 
         if (maspik_get_settings('maspikYearCheck')) {
             $custom_html .= '<div class="ninja-forms-field maspik-field">
-                <label for="Maspik-currentYear" class="ninja-forms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-currentYear" id="Maspik-currentYear" class="ninja-forms-field-element" placeholder="">
-            </div>';
-        }
-
-        if (maspik_get_settings('maspikTimeCheck')) {
-            $custom_html .= '<div class="ninja-forms-field maspik-field">
-                <label for="Maspik-exactTime" class="ninja-forms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-exactTime" id="Maspik-exactTime" class="ninja-forms-field-element" placeholder="">
+                <label for="Maspik-currentYear" class="ninja-forms-field-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="ninja-forms-field-element" placeholder="">
             </div>';
         }
 

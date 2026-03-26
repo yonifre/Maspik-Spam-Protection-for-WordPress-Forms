@@ -82,6 +82,9 @@ function weekly_api_to_maspik_request_callback() {
     $data['is_supporting'] = cfes_is_supporting();
     $data['maspik_api_requests'] = $api_data_string ? implode(',', $api_data_string) : '0';
     $data['active_plugins'] = $active_plugin;
+    $data['ai_spam_check'] = maspik_get_settings('maspik_ai_check');
+    $data['maspik_get_ai_logs'] = maspik_get_ai_logs();
+
 
     
     // URL of the REST API endpoint
@@ -138,6 +141,7 @@ function weekly_spam_logs_request_callback() {
             $table_name
         WHERE 
             spam_tag NOT LIKE '%exported%'
+            AND spam_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
         ORDER BY 
             id ASC
         LIMIT 300
@@ -169,17 +173,17 @@ function weekly_spam_logs_request_callback() {
         )
     );
 
-    // Check if the API call was successful
-    if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
-        // Update the spam_tag column to include "exported"
-        if (!empty($ids_to_update)) {
-            $ids_string = implode(',', $ids_to_update);
-            $wpdb->query("
-                UPDATE $table_name 
-                SET spam_tag = CONCAT(spam_tag, ', exported') 
-                WHERE id IN ($ids_string)
-            ");
+        // Check if the API call was successful
+        if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
+            // Update the spam_tag column to include "exported"
+            if (!empty($ids_to_update)) {
+                $ids_string = implode(',', $ids_to_update);
+                $wpdb->query("
+                    UPDATE $table_name 
+                    SET spam_tag = CONCAT(CASE WHEN spam_tag IS NULL OR spam_tag = '' THEN '' ELSE CONCAT(spam_tag, ', ') END, 'exported') 
+                    WHERE id IN ($ids_string)
+                ");
+            }
         }
-    }
 }
 add_action( 'weekly_spam_logs_request', 'weekly_spam_logs_request_callback' );// weekly_spam_logs_request

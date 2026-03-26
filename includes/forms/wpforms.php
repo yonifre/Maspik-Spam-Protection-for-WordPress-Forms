@@ -16,25 +16,69 @@ if ( ! defined( 'WPINC' ) ) {
 add_action('wpforms_process_before', function( $entry, $form_data ) {
   $error_message = cfas_get_error_text();
   $spam = false;
-  $reversed = array_reverse($form_data['fields']);
-  $last = $reversed[0];
+  $fields = isset($form_data['fields']) && is_array($form_data['fields']) ? $form_data['fields'] : array();
+  $reversed = array_reverse($fields);
+  $last = !empty($reversed) ? $reversed[0] : null;
 
   // ip
   $ip = maspik_get_real_ip();
   $reason = "";
 
+  // Collect relevant content fields for AI (text, name, email, phone, textarea)
+  $content_fields = array();
 
-    // Country IP Check 
-    $GeneralCheck = GeneralCheck($ip,$spam,$reason,$_POST,"wpforms");
+  if ( isset( $entry['fields'] ) && is_array( $entry['fields'] ) ) {
+      foreach ( $entry['fields'] as $field_id => $field_entry ) {
+          $field_type = '';
+          if ( isset( $fields[ $field_id ]['type'] ) ) {
+              $field_type = $fields[ $field_id ]['type'];
+          } elseif ( isset( $field_entry['type'] ) ) {
+              $field_type = $field_entry['type'];
+          }
+
+          if ( empty( $field_type ) ) {
+              continue;
+          }
+
+          // Only care about textual content fields
+          if ( ! in_array( $field_type, array( 'text', 'name', 'email', 'phone', 'textarea' ), true ) ) {
+              continue;
+          }
+
+          $value = isset( $field_entry['value'] ) ? $field_entry['value'] : '';
+          if ( is_array( $value ) ) {
+              $value = implode( ' ', array_map( 'strval', $value ) );
+          }
+          $value = sanitize_text_field( (string) $value );
+
+          if ( $value === '' ) {
+              continue;
+          }
+
+          $key = isset( $fields[ $field_id ]['label'] ) && $fields[ $field_id ]['label'] !== ''
+              ? (string) $fields[ $field_id ]['label']
+              : (string) $field_id;
+
+          $content_fields[ $key ] = $value;
+      }
+  }
+
+  // Add key 'maspik_spam_key' with value from $_POST['maspik_spam_key'] if exists to the entry fields
+  $all_fields = array_merge($entry['fields'], isset($_POST['maspik_spam_key']) ? ['maspik_spam_key' => $_POST['maspik_spam_key']] : []);
+
+    // General check (Country/IP, honeypot, spam key, AI Matrix, etc.)
+    $GeneralCheck = GeneralCheck($ip,$spam,$reason,$all_fields,"wpforms", $content_fields);
     $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false ;
-    $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;  
+    $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;
     $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false ;
-    $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
+    $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false ;
+    $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
 
-    //If country or ip is in blacklist
-  if ( $spam ) {
-    efas_add_to_log($type = "General",$reason, $entry['fields'] , "Wpforms", $message,  $spam_val );
-    wpforms()->process->errors[ $form_data['id'] ][ $last['id'] ] = cfas_get_error_text($message);
+    if ( $spam ) {
+    efas_add_to_log($type, $reason, $entry['fields'], "Wpforms", $message, $spam_val);
+    if ($last && isset($last['id'])) {
+        wpforms()->process->errors[ $form_data['id'] ][ $last['id'] ] = cfas_get_error_text($message);
+    }
       return;
   }
   
@@ -81,7 +125,7 @@ add_action( 'wpforms_process_validate_email', function( $field_id, $field_submit
   $spam_val = $field_value;
     if( $spam) {
       $error_message = cfas_get_error_text();
-      efas_add_to_log($type = "email","Email $field_value is block $spam", $_POST, "Wpforms", "emails_blacklist", $spam_val);
+      efas_add_to_log($type = "email", $spam, $_POST, "Wpforms", "emails_blacklist", $spam_val);
       wpforms()->process->errors[ $form_data['id'] ][ $field_id ] = $error_message;
     }
 }, 10, 3 );
@@ -135,28 +179,20 @@ add_filter('wpforms_display_submit_before', 'add_maspikhp_html_to_wpforms' );
 function add_maspikhp_html_to_wpforms() {
     if ( !is_admin() ){
 
-        if (maspik_get_settings('maspikHoneypot')) {
+        if (efas_get_spam_api('maspikHoneypot', 'bool')) {
             $honeypot_name = maspik_HP_name();
             echo  '<div class="wpforms-field wpforms-field-name maspik-field">
-                <label for="' . $honeypot_name . '" class="wpforms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="' . $honeypot_name . '" id="' . $honeypot_name . '" class="wpforms-field-medium" placeholder="Leave this field empty">
+                <label for="' . esc_attr( $honeypot_name ) . '" class="wpforms-field-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="' . esc_attr( $honeypot_name ) . '" id="' . esc_attr( $honeypot_name ) . '" class="wpforms-field-medium" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
             </div>';
         }
 
         if (maspik_get_settings('maspikYearCheck')) {
             echo  '<div class="wpforms-field wpforms-field-name maspik-field">
-                <label for="Maspik-currentYear" class="wpforms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"  aria-hidden="true" tabindex="-1" name="Maspik-currentYear" id="Maspik-currentYear" class="wpforms-field-medium" placeholder="">
+                <label for="Maspik-currentYear" class="wpforms-field-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="wpforms-field-medium" placeholder="">
             </div>';
         }
-
-        if (maspik_get_settings('maspikTimeCheck')) {
-            echo  '<div class="wpforms-field wpforms-field-name maspik-field">
-                <label for="Maspik-exactTime" class="wpforms-field-label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"  aria-hidden="true" tabindex="-1" name="Maspik-exactTime" id="Maspik-exactTime" class="wpforms-field-medium" placeholder="">
-            </div>';
-        }
-
     }
 }
 

@@ -1,5 +1,67 @@
 # Changelog #
 
+## 2.5.5 - 20/08/2025 ##
+* New (Beta) feature - AI spam check - Give it a try!
+* For Developers - Add hooks to disable spam check for specific forms link: [Developers Hooks](https://wpmaspik.com/documentation/developers/?readme-file)
+* Fixed - Fix issue where Breakdance form didn't recognize Spam key check.
+* Fixed - Fix issue where search form was not submitting properly in some cases.
+
+
+## 2.5.4 - 09/08/2025 ##
+* New feature - Add URL field blocker.
+* New feature - Add support for Breakdance Builder forms.
+* Fixed - Fix issue where spam statistics dashboard give php error when no spam was blocked in some cases.
+
+## 2.5.3 - 24/05/2025 ##
+* Fixed - Fix php error where function was call to early.
+* We want to grow and improve the experience! so we need your help! please:
+  * Share your feedback and suggestions to our [Suggestion Box](https://wpmaspik.com/#suggestions?readme-file).
+  * Give as 5 stars review on [WordPress.org](https://wordpress.org/support/plugin/contact-forms-anti-spam/reviews/#new-post).
+  * Spread the word and write a Guide/Vlog/Post about Maspik, and receive a Pro license on us.
+
+## 2.5.2 - 23/05/2025 ## 
+* New feature - adding a feedback form to the settings page to help us improve the plugin.
+* Fixed an issue where some hidden fields had duplicate IDs.
+* Fixed database update issue when upgrading from version 1.x to version 2.0 or higher.
+* Improved - Enhanced handling and performance for processing lengthy textarea content.
+
+
+## 2.5.1 - 30/04/2025 ## 
+* Bug fix - Fixed an issue where search forms were not submitting properly in certain scenarios.
+* We want to grow and improve the experience! so we need your help! please:
+  * Share your feedback and suggestions to our [Suggestion Box](https://wpmaspik.com/#suggestions?readme-file).
+  * Give as 5 stars review on [WordPress.org](https://wordpress.org/support/plugin/contact-forms-anti-spam/reviews/#new-post).
+  * Spread the word and write a Guide/Vlog/Post about Maspik, and receive a Pro license on us.
+
+
+## 2.5.0 - 22/04/2025 ## 
+* Improve - Improved UI/UX of the entire plugin.
+* New feature! - Add Spam statistics dashboard page.
+* New feature - Add spam statistics data to admin dashboard.
+* New feature - Add reset all settings to default (Factory reset).
+* New feature - Adding support for Custom PHP forms by using the [filter](https://wpmaspik.com/documentation/custom-php-form/?readme-file).
+* Bug fix - Fixed form validation issues that occurred when forms were placed inside popups and WP Rocket caching was enabled with strict settings.
+* Bug fix - Fix translation issue with WP version 6.7, load too early.
+* Bug fix - Fixed issue where maximum links limit was not being set through the Dashboard API.
+* Improvement - Compatibility with WP version 6.8
+
+
+## 2.4.4 - 20/03/2025 ## 
+* Announcement - Advance key check is now officialy released and not anymore in ongoing exprement.
+* Improved - Enhanced security by hiding passwords in Spam log
+* Improved - Disabled autocomplete functionality in WooCommerce registration forms for better security
+
+
+## 2.4.3 - 19/02/2025 ## 
+* Fixed - Fix Elementor Bot detector option not working wall (When page source url is empty).
+* Fixed - Fix detection string in Textarea field with regex/wildcard format.
+* Improve - Improve detection string in Textarea field: Now ignore ,!?. at the end of the string for better detection.
+
+## 2.4.2 - 18/02/2025 ## 
+* New feature - Add option to block submissions with emojis in textarea fields.
+* New feature - Added support for Hello Plus form builder plugin.
+
+
 ## 2.4.1 - 05/02/2025 ## 
 * Improved - Improve IP detection.
 * Improved - Text area field blacklist check now supports advanced pattern matching: Use wildcards (*) for flexible blocking - for example, adding "*seo*" will block any text containing "seo" anywhere, like "seoexpert". This gives more control for advanced users to block specific content variations.
@@ -143,7 +205,7 @@
 
 ## 2.0.3 - 12/07/2024 ##
 * Improvement - Improve Dashboard(Maspik API) - add more fields in WpMaspik site for Pro users  
-* Bug fix - Fix languages chack   
+* Bug fix - Fix languages check   
 * Bug fix - Fix toggel option for some condition 
 
 ## 2.0.2 - 11/07/2024 ##

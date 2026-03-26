@@ -10,22 +10,8 @@ function validate_jet_form_for_spam($form_handler) {
         $error_message = cfas_get_error_text();
         $ip = maspik_get_real_ip();
 
-        // Country IP Check
-        $spam = false;
-        $reason = "";
-        $GeneralCheck = GeneralCheck($ip, $spam, $reason, $_POST,"jetform");
-        $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false;
-        $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : "";
-        $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : "";
-        $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
-
-        if ($spam) {
-            efas_add_to_log("Country/IP", $reason, $_POST, "JetFormBuilder", $message,  $spam_val);
-            throw new \Jet_Form_Builder\Exceptions\Request_Exception(
-                $error_message,
-                array('ip_check' => cfas_get_error_text($message))
-            );
-        }
+        // Collect relevant content fields for AI
+        $content_fields = array();
 
         foreach ($form_fields as $field) {
             if (isset($field['attrs']['name']) && !empty($field['attrs']['name'])) {
@@ -47,6 +33,9 @@ function validate_jet_form_for_spam($form_handler) {
                                 array($field_key => cfas_get_error_text($message))
                             );
                         }
+
+                        // Add to AI content fields if valid
+                        $content_fields[ $field_key ] = $field_value;
                     }
 
                     // Email field validation
@@ -54,11 +43,16 @@ function validate_jet_form_for_spam($form_handler) {
                         $spam = checkEmailForSpam($field_value);
                         $spam_val = $field_value;
                         if ($spam) {
-                            efas_add_to_log("email", "Email $field_value is block $spam", $_POST, "JetFormBuilder", "emails_blacklist", $spam_val);
+                            efas_add_to_log("email", $spam, $_POST, "JetFormBuilder", "emails_blacklist", $spam_val);
                             throw new \Jet_Form_Builder\Exceptions\Request_Exception(
                                 $error_message,
                                 array($field_key => $error_message)
                             );
+                        }
+
+                        // Add to AI content fields if valid
+                        if ( ! $spam ) {
+                            $content_fields[ $field_key ] = $field_value;
                         }
                     }
 
@@ -78,6 +72,11 @@ function validate_jet_form_for_spam($form_handler) {
                                 array($field_key => cfas_get_error_text($message))
                             );
                         }
+
+                        // Add to AI content fields if valid
+                        if ( $valid ) {
+                            $content_fields[ $field_key ] = $field_value;
+                        }
                     }
 
                     // Textarea field validation
@@ -95,10 +94,33 @@ function validate_jet_form_for_spam($form_handler) {
                                 array($field_key => cfas_get_error_text($message))
                             );
                         }
+
+                        // Add to AI content fields if valid
+                        if ( ! $spam ) {
+                            $content_fields[ $field_key ] = $field_value;
+                        }
                     }
 
                 }
             }
+        }
+
+        // Country/IP, honeypot, spam key, AI Matrix etc. – run after per-field checks
+        $spam = false;
+        $reason = "";
+        $GeneralCheck = GeneralCheck($ip, $spam, $reason, $_POST,"jetform", $content_fields);
+        $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false;
+        $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : "";
+        $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : "";
+        $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false;
+        $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
+
+        if ($spam) {
+            efas_add_to_log($type, $reason, $_POST, "JetFormBuilder", $message, $spam_val);
+            throw new \Jet_Form_Builder\Exceptions\Request_Exception(
+                $error_message,
+                array('ip_check' => cfas_get_error_text($message))
+            );
         }
     }
 }
@@ -111,25 +133,18 @@ function add_maspikhp_html_to_jet_form($content, $field_name, $attrs) {
     if ($field_name === 'submit-field') {
         $addhtml = "";
 
-        if (maspik_get_settings('maspikHoneypot')) {
+        if (efas_get_spam_api('maspikHoneypot', 'bool')) {
             $honeypot_name = maspik_HP_name();
             $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
-                <label for="' . $honeypot_name . '" class="jet-form-builder__label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="' . $honeypot_name . '" id="' . $honeypot_name . '" class="jet-form-builder__field jet-form-builder__field-text" placeholder="Leave this field empty">
+                <label for="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="' . esc_attr( $honeypot_name ) . '" id="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__field jet-form-builder__field-text" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
             </div>';
         }
 
         if (maspik_get_settings('maspikYearCheck')) {
             $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
-                <label for="Maspik-currentYear" class="jet-form-builder__label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-currentYear" id="Maspik-currentYear" class="jet-form-builder__field jet-form-builder__field-text" placeholder="">
-            </div>';
-        }
-
-        if (maspik_get_settings('maspikTimeCheck')) {
-            $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
-                <label for="Maspik-exactTime" class="jet-form-builder__label">Leave this field empty</label>
-                <input size="1" type="text" autocomplete="off"   aria-hidden="true" tabindex="-1" name="Maspik-exactTime" id="Maspik-exactTime" class="jet-form-builder__field jet-form-builder__field-text" placeholder="">
+                <label for="Maspik-currentYear" class="jet-form-builder__label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="jet-form-builder__field jet-form-builder__field-text" placeholder="">
             </div>';
         }
 

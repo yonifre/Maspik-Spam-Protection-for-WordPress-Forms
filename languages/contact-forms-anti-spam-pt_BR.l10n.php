@@ -1,0 +1,2 @@
+<?php
+return ['project-id-version'=>'Maspik - Spam blacklist','report-msgid-bugs-to'=>'','pot-creation-date'=>'2025-06-11 02:38+0000','po-revision-date'=>'2025-06-11 02:40+0000','last-translator'=>'','language-team'=>'Portuguese (Brazil)','language'=>'pt_BR','plural-forms'=>'nplurals=2; plural=n != 1;','mime-version'=>'1.0','content-type'=>'text/plain; charset=UTF-8','content-transfer-encoding'=>'8bit','x-generator'=>'Loco https://localise.biz/','x-loco-version'=>'2.8.0; wp-6.8.1; php-8.2.0','x-domain'=>'contact-forms-anti-spam','messages'=>[]];

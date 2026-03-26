@@ -27,7 +27,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
 </div>
         </div>
         <div id="dlm_license_status">
-            <span class="label"><?php _e( 'License Status' ); ?></span>
+            <span class="label"><?php esc_html_e( 'License Status' ); ?></span>
             <span class="value <?php echo esc_attr( $statusCode ); ?>"><?php echo esc_html( $statusText ); ?></span>
         </div>
     </div>
@@ -44,14 +44,14 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <fieldset id="dlm_activate_plugin">
                     <div class="dlm_license_key ">
-                        <p class="label"><?php _e( 'License Key' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'License Key' ); ?></p>
                         <p class="field"><input id="license_key" name="license_key" readonly type="text" value="<?php echo esc_attr( $hidden_license_key ); ?>"></p>
                     </div>
                     <div class="dlm_license_email ">
-                        <p class="label"><?php _e( 'Select activation token' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'Select activation token' ); ?></p>
                         <p class="field">
                             <select name="activation_token" id="activation_token">
-                                <option value="new"><?php _e( 'Create new activation token' ); ?></option>
+                                <option value="new"><?php esc_html_e( 'Create new activation token' ); ?></option>
 								<?php if ( ! empty( $licenseData['activations'] ) ): ?>
 
 									<?php foreach ( $licenseData['activations'] as $activation ): ?>
@@ -71,8 +71,8 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
                         <input type="hidden" name="action" value="<?php echo esc_attr( $this->configuration->prefix . 'activator' ); ?>"/>
                         <input type="hidden" name="type" value="update_token"/>
 						<?php echo wp_nonce_field( 'activate_nonce' ); ?>
-                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="save" value="<?php _e( 'Save' ); ?>">
-                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php _e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php _e( 'Delete' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="save" value="<?php esc_html_e( 'Save' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php esc_html_e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php esc_html_e( 'Delete' ); ?>">
                     </fieldset>
                 </div>
             </form>
@@ -87,7 +87,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <fieldset id="dlm_activate_plugin">
                     <div class="dlm_license_key ">
-                        <p class="label"><?php _e( 'License Key' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'License Key' ); ?></p>
                         <p class="field"><input id="license_key" name="license_key" readonly type="text" value="<?php echo esc_attr( $hidden_license_key ); ?>"></p>
                     </div>
                 </fieldset>
@@ -96,7 +96,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
                     <fieldset class="dlm_license_button">
                         <input type="hidden" name="action" value="<?php echo esc_attr( $this->configuration->prefix . 'activator' ); ?>"/>
 						<?php echo wp_nonce_field( 'activate_nonce' ); ?>
-                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php _e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php _e( 'Delete' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php esc_html_e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php esc_html_e( 'Delete' ); ?>">
                     </fieldset>
                 </div>
             </form>
@@ -114,7 +114,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <fieldset id="dlm_activate_plugin">
                     <div class="dlm_license_key ">
-                        <p class="label"><?php _e( 'License Key' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'License Key' ); ?></p>
                         <p class="field"><input id="license_key" name="license_key" readonly type="text" value="<?php echo esc_attr( $hidden_license_key ); ?>"></p>
                     </div>
                 </fieldset>
@@ -123,8 +123,8 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
                     <fieldset class="dlm_license_button">
                         <input type="hidden" name="action" value="<?php echo esc_attr( $this->configuration->prefix . 'activator' ); ?>"/>
 						<?php echo wp_nonce_field( 'activate_nonce' ); ?>
-                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="reactivate" value="<?php _e( 'Reactivate' ); ?>">
-                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php _e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php _e( 'Delete' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="reactivate" value="<?php esc_html_e( 'Reactivate' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php esc_html_e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php esc_html_e( 'Delete' ); ?>">
                     </fieldset>
                 </div>
             </form>
@@ -141,7 +141,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <fieldset id="dlm_activate_plugin">
                     <div class="dlm_license_key ">
-                        <p class="label"><?php _e( 'License Key' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'License Key' ); ?></p>
                         <p class="field"><input id="license_key" name="license_key" readonly type="text" value="<?php echo esc_attr( $hidden_license_key ); ?>"></p>
                     </div>
                 </fieldset>
@@ -150,8 +150,8 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
                     <fieldset class="dlm_license_button">
                         <input type="hidden" name="action" value="<?php echo esc_attr( $this->configuration->prefix . 'activator' ); ?>"/>
 						<?php echo wp_nonce_field( 'activate_nonce' ); ?>
-                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="deactivate" value="<?php _e( 'Deactivate' ); ?>">
-                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php _e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php _e( 'Delete' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="deactivate" value="<?php esc_html_e( 'Deactivate' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmdac_btn" name="delete" onclick="return confirm('<?php esc_html_e( "Are you sure? This action cannot be reverted." ); ?>')" value="<?php esc_html_e( 'Delete' ); ?>">
                     </fieldset>
                 </div>
             </form>
@@ -161,7 +161,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
             <form method="POST" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
                 <fieldset id="dlm_activate_plugin">
                     <div class="dlm_license_key ">
-                        <p class="label"><?php _e( 'License Key' ); ?></p>
+                        <p class="label"><?php esc_html_e( 'License Key' ); ?></p>
                         <p class="field"><input id="license_key" name="license_key" type="text" value=""></p>
                     </div>
                 </fieldset>
@@ -170,7 +170,7 @@ $statusText = $statusCode === $license::STATUS_MISSING_LICENSE_KEY ? __( 'Not Ac
                     <fieldset class="dlm_license_button">
                         <input type="hidden" name="action" value="<?php echo esc_attr( $this->configuration->prefix . 'activator' ); ?>"/>
 						<?php echo wp_nonce_field( 'activate_nonce' ); ?>
-                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="activate" value="<?php _e( 'Activate' ); ?>">
+                        <input type="submit" class="dlm_btn__prim dlm_lmac_btn" name="activate" value="<?php esc_html_e( 'Activate' ); ?>">
                     </fieldset>
                 </div>
             </form>

@@ -41,7 +41,6 @@ class Maspik {
 		$this->plugin_name = 'maspik';
 
 		$this->load_dependencies();
-		$this->set_locale();
 		$this->define_admin_hooks();
 
 	}
@@ -57,22 +56,20 @@ class Maspik {
 		 * core plugin.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-maspik-loader.php';
-
-		/**
-		 * The class responsible for defining internationalization functionality
-		 * of the plugin.
-		 */
-		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-maspik-i18n.php';
-
 		/**
 		 * The class responsible for defining all actions that occur in the admin area.
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-maspik-admin.php';
+
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-maspik-client-ip.php';
       
-     // functions
+		// functions
       	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/functions.php';
-     // spam block functions
+     	      // spam block functions
       	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/spam-block.php';
+      
+      // AI spam check functions (Beta feature)
+      	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/ai-spam-check.php';
 
       /**
       * Forms functions
@@ -101,6 +98,11 @@ class Maspik {
 
       // wp-general
       	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/wp-general.php';
+
+      	// WooCommerce checkout (orders) spam check – Pro only, off by default; file always loaded when WC active
+      	if ( maspik_is_plugin_active( 'woocommerce/woocommerce.php' ) ) {
+      		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/woocommerce-orders.php';
+      	}
 
       	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/playground.php';
       
@@ -161,6 +163,13 @@ class Maspik {
         }
       }
 
+      // Breakdance Builder
+      if( maspik_get_settings( "maspik_support_breakdance_forms" ) != "no" ){ 
+        if ( maspik_is_plugin_active( 'breakdance/plugin.php' ) ) {
+          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/breakdance.php';
+        }
+      }
+
       // Buddypress
       if( maspik_get_settings( "maspik_support_buddypress_forms" ) != "no" ){ 
         if ( maspik_is_plugin_active( 'buddypress/bp-loader.php' ) ) {
@@ -174,27 +183,34 @@ class Maspik {
 			  require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/helloplus.php';
         }
       }
+	  // Metform
+      if( maspik_get_settings( "maspik_support_metform_forms" ) != "no" ){ 
+        if ( maspik_is_plugin_active( 'metform/metform.php' ) ) {
+          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/metform.php';
+        }
+      }
+
+	  // BitForm
+      if( maspik_get_settings( "maspik_support_bitform_forms" ) != "no" ){ 
+        if ( maspik_is_plugin_active( 'bit-form/bitforms.php' ) ) {
+          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/bitform.php';
+        }
+      }
+
+	   // Custom Forms
+		if( maspik_get_settings( "maspik_support_custom_forms" ) != "no" ){ 
+			require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/custom.php';
+      	}
 
 
 		
       // If agree to shere Non sensitive information 
-      if( maspik_get_settings("shere_data", '', 'old') || maspik_get_settings("shere_data") ){ 
-          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/statistics-data.php';
-      }
+       if( maspik_get_settings("shere_data", '', 'old') || maspik_get_settings("shere_data") ){ 
+        	require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/statistics-data.php';
+        }
+
 
 		$this->loader = new Maspik_Spam_Blacklist_Loader();
-
-	}
-
-	/**
-	 * Define the locale for this plugin for internationalization.
-	 *
-	 */
-	private function set_locale() {
-
-		$plugin_i18n = new Maspik_i18n();
-
-		$this->loader->add_action( 'plugins_loaded', $plugin_i18n, 'load_plugin_textdomain' );
 
 	}
 

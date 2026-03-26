@@ -40,7 +40,7 @@ if ( ! defined( 'WPINC' ) ) {
 
         $already_run = true;
     }
-    add_action( 'plugins_loaded', 'maspik_check_if_need_to_run_once' , 20);
+    add_action( 'init', 'maspik_check_if_need_to_run_once' , 20);
 
      //Check for PRO -addclass- 
         function maspik_add_pro_class($type = ""){
@@ -146,19 +146,25 @@ function maspik_toggle_button($name, $id, $dbrow_name, $class, $type = "", $manu
                 <input type='checkbox' id=". esc_attr($id) ." name='". esc_attr($name) . "' " . esc_attr($checked) . " class='". esc_attr($class) ."'> 
                 <span class='maspik-toggle-slider'></span>
                 </label>";
-    $apitext = __('Active from Dashboard', 'contact-forms-anti-spam');
-    $toggle .= maspik_is_contain_api($api_array) ? "<span class='limit-api-value'>$apitext</span>" : "";
+    $apitext = __('Dashboard rules', 'contact-forms-anti-spam');
+    if (maspik_is_contain_api($api_array)) {
+        $toggle .= "<span class='limit-api-chip'>
+                        <span class='limit-api-label'>$apitext</span>
+                    </span>";
+    }
     return $toggle;
 }
 
 
-        function maspik_save_button_show($label = "Save", $add_class = "", $name = "maspik-save-btn" ){
-
-            echo "<div class='submit'><input type='submit' name='". $name."' value='". esc_attr($label) ."' id='submit' class='". esc_attr($add_class) ."'></div>";
-
+        function maspik_save_button_show( $label = 'Save', $add_class = '', $name = 'maspik-save-btn' ) {
+            echo '<div class="maspik-save-submit-wrap">';
+            echo '<div class="submit maspik-save-submit--with-progress">';
+            echo "<input type='submit' name='" . esc_attr( $name ) . "' value='" . esc_attr( $label ) . "' id='submit' class='" . esc_attr( $add_class ) . "'>";
+            echo '</div>';
+            echo '</div>';
         } 
 
-        function create_maspik_textarea($name, $rows = 4, $cols = 50, $class = '', $pholder = "") { 
+        function create_maspik_textarea($name, $rows = 4, $cols = 50, $class = '', $pholder = "", $maxlength = 0) { 
 
         
             if($pholder == "error-message"){
@@ -174,6 +180,9 @@ function maspik_toggle_button($name, $id, $dbrow_name, $class, $type = "", $manu
             if($txtplaceholder!= ""){
                 $textarea .= ' placeholder="' . esc_attr($txtplaceholder) . '"';
             }
+            if($maxlength > 0){
+                $textarea .= ' maxlength="' . esc_attr($maxlength) . '"';
+            }
             $textarea .= '>' . esc_html($data) . '</textarea>';
 
             
@@ -182,52 +191,59 @@ function maspik_toggle_button($name, $id, $dbrow_name, $class, $type = "", $manu
             return $textarea;
         }
 
-        function create_maspik_input($name, $class = '', $mode = "text") {      
+        function create_maspik_input($name, $class = '', $mode = "text", $placeholder = "") {      
             
             $data = ( $mode === "number" && maspik_get_settings($name) ) ? (int)maspik_get_settings($name) : maspik_get_settings($name);
 
             $class_attr = !empty($class) ? ' class="' . esc_attr($class . " is-". $mode) . '"' : '';
-            $input = "<input  name='" . esc_attr($name) . "' id='". esc_attr($name) . " '" . $class_attr . " type='" . $mode . "' value='". esc_attr($data) ."'></input>";
+            $input = "<input  name='" . esc_attr($name) . "' id='". esc_attr($name) . " '" . $class_attr . " type='" . $mode . "' value='". esc_attr($data) ."' placeholder='". esc_attr($placeholder) ."'></input>";
 
 
             return $input;
         }
 
         function create_maspik_numbox($id, $name, $class, $label, $default = '', $min = 2, $max = 10000) {      
-            
             $data = maspik_get_settings($name);
-            if(is_array(efas_get_spam_api($name))){
-                $api_value = efas_get_spam_api($name)[0];
-            }else{
-                $api_value = efas_get_spam_api($name);
+            // Check the API value
+            $api_value = null;
+            if(is_array(efas_get_spam_api($name,"bool"))){
+                $api_value = efas_get_spam_api($name, "bool")[0];
+            } else {
+                $api_value = efas_get_spam_api($name, "bool");
+            }
+            // Check the original value
+            $value = '';
+            if ($data === '' || $data === null) {  // If the value is completely empty
+                if ($default > 0) {
+                    $value = intval($default);    
+                }
+            } else {  // If there is a value (including 0)
+                $value = intval($data);
             }
 
-           
+            $numbox = "<div class='maspik-numbox-wrap'>
+                <label for='" . esc_attr($id) . "'>" . esc_html($label) . ":</label>
+                <input type='number' 
+                    id='" . esc_attr($id) . "' 
+                    name='" . esc_attr($name) . "' 
+                    class='" . esc_attr($class) . "' 
+                    min='" . esc_attr($min) . "' 
+                    max='" . esc_attr($max) . "' 
+                    step='1' 
+                    value='" . esc_attr($value) . "'>";
 
-            $class_attr = !empty($class) ? ' class="' . esc_attr($class) . '"' : '';
-
-            $numbox = "";
-            $numbox .= "<div class='maspik-numbox-wrap'><label for=". esc_attr($id) .">". esc_html($label) .":</label>
-            <input type='number' id=". esc_attr($id) ." name=". esc_attr($name) ." ". $class_attr ." min='".  esc_attr($min) ."' max='" . esc_attr($max) . "' step='1' value='";
-
-
-            if($data != ''){
-                $numbox .=  esc_attr($data);
-
-            }else{
-                $numbox .= esc_attr($default);
-
+            // Add Dashboard value (API value) if it exists and has a value (including 0)
+            if($api_value !== null && $api_value !== '' && trim($api_value) !== '') {
+                $numbox .= "<div class='limit-api-wrap'>
+                    <span class='limit-api-chip'>
+                        <span class='dashicons dashicons-cloud limit-api-icon' aria-hidden='true'></span>
+                        <span class='limit-api-label'>" . esc_html__('Dashboard value', 'contact-forms-anti-spam') . "</span>
+                        <span class='limit-api-value'>" . esc_html($api_value) . "</span>
+                    </span>
+                </div>";
             }
-
-            $numbox .= "'>";
             
-             if($api_value){
-                $numbox .= " <div class='limit-api-wrap'><span class='limit-api-label'>API: </span><span class='limit-api-value'>" . esc_html($api_value) . "</span></div>";
-            }
-
-            
-            
-            $numbox.= "</div>";
+            $numbox .= "</div>";
                     
             return $numbox;
         }
@@ -295,36 +311,96 @@ function maspik_toggle_button($name, $id, $dbrow_name, $class, $type = "", $manu
     }
     //Check if DB has toggle rows, if none, make them - END --
 
+    // Helper: mask sensitive dashboard values (API keys, tokens, etc.)
+        function maspik_mask_dashboard_value( $value, $field_name ) {
+            $sensitive_fields = array(
+                'abuseipdb_api',
+                'proxycheck_io_api',
+                'numverify_api',
+            );
+
+            $value = trim( (string) $value );
+
+            if ( $value === '' ) {
+                return $value;
+            }
+
+            // Only mask specific sensitive fields
+            if ( ! in_array( $field_name, $sensitive_fields, true ) ) {
+                return $value;
+            }
+
+            $len = strlen( $value );
+
+            // For very short values, just replace everything with asterisks
+            if ( $len <= 8 ) {
+                return str_repeat( '*', $len );
+            }
+
+            // Keep first 6 and last 4 characters, mask the rest
+            $start = substr( $value, 0, 6 );
+            $end   = substr( $value, -4 );
+            $mask_length = max( 3, $len - 10 );
+
+            return $start . str_repeat( '•', $mask_length ) . $end;
+        }
+
     //Maspik API
-        function maspik_spam_api_list($name, $array = ""){
+        function maspik_spam_api_list($name, $array = "") {
             $api = efas_get_spam_api($name);
  
-            $apitext = '';
-
-            if ($api) { 
-                echo "<div class='maspik-form-api-list'><h5 class='maspik-api-title'>From Maspik Dashboard & Auto-populate</h5>";
-                if (!is_array($api)) {
-                    $api =  explode( "\n", str_replace("\r", "", $api) );
-                }
-                if (is_array($api)) { 
-                    foreach ($api as $line){
-                        if( is_array($array) ){
-                           
-                            foreach ($array as $key => $value) {
-                               if ($key == preg_replace('/\s+/', '', $line)) {
-                                    $apitext .='<span class="api-entry">' . esc_html($value) . '</span> ';
-                                }
-                            }
-                        } else $apitext .= esc_html($line) . '<br>';
-                    }
-                } else { // else is_array $api
-                    $apitext = $api;
-                }
-
-                echo "<div class='maspik-api-text-wrap'><div class='maspik-api-text ";
-                if( !is_array($array) ) echo "maspik-custom-scroll";
-                echo "'>" . $apitext . "</div></div></div>";
+            if (!$api) {
+                return;
             }
+
+            $toggle_id = 'maspik-api-toggle-' . esc_attr($name);
+
+            echo '<div class="maspik-form-api-list">';
+            echo '<input type="checkbox" id="' . $toggle_id . '" class="maspik-api-toggle" hidden>';
+            echo '<label for="' . $toggle_id . '" class="maspik-api-chip">';
+            echo '<span class="dashicons dashicons-cloud maspik-api-icon" aria-hidden="true"></span>';
+            echo '<span class="maspik-api-chip-text">' . esc_html__('Dashboard rules', 'contact-forms-anti-spam') . '</span>';
+            echo '<span class="dashicons dashicons-arrow-down-alt2 maspik-api-chip-caret" aria-hidden="true"></span>';
+            echo '</label>';
+            
+            // Convert string to array if needed
+            if (!is_array($api)) {
+                $api = explode("\n", str_replace("\r", "", $api));
+            }
+
+            echo '<div class="maspik-api-text-wrap">';
+            echo '<div class="maspik-api-text' . (!is_array($array) ? ' maspik-custom-scroll' : '') . '">';
+
+            if (is_array($api)) {
+                if (is_array($array)) {
+                    // Handle associative array case
+                    foreach ($api as $line) {
+                        $key = preg_replace('/\s+/', '', $line);
+                        if (isset($array[$key])) {
+                            $display_value = maspik_mask_dashboard_value( $array[$key], $name );
+                            echo '<span class="api-entry">' . esc_html( $display_value ) . '</span>';
+                        }
+                    }
+                } else {
+                    // Handle simple array case
+                    echo '<ul class="api-entries-list">';
+                    foreach ($api as $line) {
+                        $line = trim($line);
+                        if (!empty($line)) {
+                            $display_value = maspik_mask_dashboard_value( $line, $name );
+                            echo '<li>' . esc_html( $display_value ) . '</li>';
+                        }
+                    }
+                    echo '</ul>';
+                }
+            } else {
+                // Handle string case
+                echo '<p>' . esc_html($api) . '</p>';
+            }
+
+            echo '</div>'; // Close maspik-api-text
+            echo '</div>'; // Close maspik-api-text-wrap
+            echo '</div>'; // Close maspik-form-api-list
         }
     //Maspik API - END
 
@@ -365,6 +441,9 @@ class Maspik_Admin {
 		$this->version = $version;
 		add_action('admin_menu', array( $this, 'Maspik_addPluginAdminMenu' ), 9);   
 		//add_action('admin_init', array( $this, 'registerAndBuildFields' ));
+        
+        // Add AJAX handler for feedback form
+        add_action('wp_ajax_maspik_submit_feedback', array($this, 'maspik_handle_feedback_submission'));
 	}
 
     
@@ -405,11 +484,11 @@ class Maspik_Admin {
 
         $numlogspam = maspik_spam_count() ? "(" . maspik_spam_count() . ")" : false;
 
-        add_submenu_page($this->plugin_name, 'Blacklist Option', 'Blacklist Options', 'administrator', $this->plugin_name, array($this, 'displayPluginAdminDashboard'));
+        add_submenu_page($this->plugin_name, 'Main settings', 'Main settings', 'administrator', $this->plugin_name, array($this, 'displayPluginAdminDashboard'), 10);
 
-        add_submenu_page($this->plugin_name, 'Spam Log', 'Spam Log ' . $numlogspam, 'edit_pages', $this->plugin_name . '-log.php', array($this, 'displayPluginAdminSettings'));
-
-        add_submenu_page($this->plugin_name, 'Import/Export Settings', 'Import/Export Settings', 'administrator', $this->plugin_name . '-import-export.php', array($this, 'Maspik_import_export_settings_page'));
+        add_submenu_page($this->plugin_name, 'Spam Log', 'Spam Log ' . $numlogspam, 'edit_pages', $this->plugin_name . '-log.php', array($this, 'displayPluginAdminSettings'), 20);
+        
+        add_submenu_page($this->plugin_name, 'Import/Export', 'Import/Export', 'administrator', $this->plugin_name . '-import-export.php', array($this, 'Maspik_import_export_settings_page'), 40);
 
         if ( cfes_is_supporting()) {
             $first_maspik_api_id = maspik_get_settings('private_file_id');
@@ -427,7 +506,7 @@ class Maspik_Admin {
             'edit_pages',
             $url,
             '',
-            null
+            60
         );
 
 
@@ -445,6 +524,8 @@ class Maspik_Admin {
         }
         require_once 'partials/' . $this->plugin_name . '-log.php';
     }
+
+    
 
     public function displayPluginAdminPro() {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
@@ -486,4 +567,124 @@ class Maspik_Admin {
         add_settings_error($setting_field, $err_code, $message, $type);
     }
          
+    /**
+     * Handle feedback form submission
+     */
+    public function maspik_handle_feedback_submission() {
+        // Enable error logging
+        if (!defined('WP_DEBUG_LOG')) {
+            define('WP_DEBUG_LOG', true);
+        }
+        
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'maspik_feedback_nonce')) {
+            wp_send_json_error('Invalid nonce');
+            return;
+        }
+
+        // Get and sanitize form data
+        $feedback_type = isset($_POST['feedback_type']) ? sanitize_text_field($_POST['feedback_type']) : '';
+        $feedback_message = isset($_POST['feedback_message']) ? sanitize_textarea_field($_POST['feedback_message']) : '';
+        $feedback_email = isset($_POST['feedback_email']) ? sanitize_email($_POST['feedback_email']) : '';
+
+        // Log received data
+
+        // Validate required fields
+        if (empty($feedback_type) || empty($feedback_message)) {
+            wp_send_json_error('Required fields are missing');
+            return;
+        }
+
+        // Prepare email content
+        $site_url = get_site_url();
+        $subject = sprintf('[Maspik Feedback] %s from %s', ucfirst($feedback_type), $site_url);
+        
+        $message = "Feedback Type: " . $feedback_type . "\n\n";
+        $message .= "Message:\n" . $feedback_message . "\n\n";
+        $message .= "Site URL: " . $site_url . "\n";
+        if (!empty($feedback_email)) {
+            $message .= "User Email: " . $feedback_email . "\n";
+        }
+
+        // Set up email headers with proper From address
+        $site_name = get_bloginfo('name');
+        $domain = parse_url(get_site_url(), PHP_URL_HOST);
+        
+        // Use the site's own domain for sending
+        $from_email = 'noreply@' . $domain;
+        if (!is_email($from_email)) {
+            // If the domain is not valid, use a fallback
+            $from_email = 'noreply@' . $_SERVER['HTTP_HOST'];
+            if (!is_email($from_email)) {
+                $from_email = 'noreply@wpmaspik.com';
+            }
+        }
+        $from_name = $site_name ? $site_name : 'WordPress';
+        
+        // Add additional headers for better deliverability
+        $headers = array(
+            'Content-Type: text/plain; charset=UTF-8',
+            'From: ' . $from_name . ' <' . $from_email . '>',
+            'Reply-To: ' . (!empty($feedback_email) ? $feedback_email : $from_email),
+            'X-Mailer: PHP/' . phpversion(),
+            'X-Sender: ' . $from_email,
+            'X-Auth-User: ' . $from_email,
+            'List-Unsubscribe: <mailto:' . $from_email . '?subject=unsubscribe>',
+            'Return-Path: ' . $from_email
+        );
+
+        $to = 'hello@wpmaspik.com';
+        
+        // Debug information
+        $debug_info = array(
+            'to' => $to,
+            'from_email' => $from_email,
+            'from_name' => $from_name,
+            'subject' => $subject,
+            'message' => $message,
+            'headers' => $headers,
+            'site_url' => $site_url,
+            'php_version' => PHP_VERSION,
+            'wordpress_version' => get_bloginfo('version'),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'mail_function_exists' => function_exists('mail'),
+            'wp_mail_function_exists' => function_exists('wp_mail')
+        );
+
+        // Try to send email with error handling
+        $sent = false;
+        $error_message = '';
+        
+        try {
+            // First attempt with wp_mail
+            $sent = wp_mail($to, $subject, $message, $headers);
+            
+            // If wp_mail fails, try direct mail() function
+            if (!$sent && function_exists('mail')) {
+                $header_string = implode("\r\n", $headers);
+                $sent = mail($to, $subject, $message, $header_string);
+            }
+            
+            if (!$sent) {
+                $error_message = 'Failed to send email using both wp_mail and mail()';
+            }
+        } catch (Exception $e) {
+            $error_message = $e->getMessage();
+        }
+        
+        if ($sent) {
+            wp_send_json_success(array(
+                'message' => 'Feedback sent successfully',
+                'debug_info' => $debug_info
+            ));
+        } else {
+            wp_send_json_error(array(
+                'message' => 'Failed to send feedback: ' . $error_message,
+                'debug_info' => $debug_info
+            ));
+        }
+    }
+
+        // AI logs clearing is handled in includes/functions.php
 }
+

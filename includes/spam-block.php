@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) exit;
 function maspik_make_extra_spam_check($post) {
 
     // Honeypot check
-    if (maspik_get_settings('maspikHoneypot') && isset($post['full-name-maspik-hp']) && !empty($post['full-name-maspik-hp'])) {
+    if (efas_get_spam_api('maspikHoneypot', 'bool') && isset($post['full-name-maspik-hp']) && !empty($post['full-name-maspik-hp'])) {
         return [
             'spam' => true,
             'reason' => "Honeypot field is not empty",
@@ -25,7 +25,7 @@ function maspik_make_extra_spam_check($post) {
     }
 
     // Spam key check, maspikTimeCheck is the old name
-    if (maspik_get_settings('maspikTimeCheck')) {
+    if (efas_get_spam_api('maspikTimeCheck', 'bool')) {
 
             // Check if the spam key exists in the POST data
         if (!isset($post['maspik_spam_key']) || empty($post['maspik_spam_key'])) {
@@ -51,51 +51,6 @@ function maspik_make_extra_spam_check($post) {
 
     }
 
-    // Year check
-
-    if (maspik_get_settings('maspikYearCheck')) {
-        $serverYear = intval(date('Y'));
-        $submittedYear = sanitize_text_field($post['Maspik-currentYear']);
-        if ($post['Maspik-currentYear'] != $serverYear) {
-            return [
-                'spam' => true,
-                'reason' => "JavaScript check failed - The year submitted by JavaScript($submittedYear) does not match the current server year($serverYear)",
-                'message' => "maspikYearCheck"
-            ];
-        }
-    }
-    
-
-    // Time check
-    // TODO: remove this check, it's not needed
-    /*
-    if (maspik_get_settings('maspikTimeCheck') && isset($post['Maspik-exactTime']) && is_numeric($post['Maspik-exactTime'])) {
-        $inputTime = (int)$post['Maspik-exactTime'];
-        $currentTime = time();
-        $timeDifference = abs($currentTime - $inputTime);
-
-        if ($inputTime > $currentTime) {
-            // for prevent false positive
-                return [
-                    'spam' => false,
-                    'reason' => false,
-                    'message' => false
-            
-                // 'spam' => true,
-                //'reason' => "Invalid submission time - future timestamp detected",
-                // 'message' => "maspikTimeCheck"
-            ];
-        }
-
-        if ($timeDifference < maspik_submit_buffer()) {
-            return [
-                'spam' => true,
-                'reason' => "Maspik Spam Trap - Submitted too fast, Only {$timeDifference} seconds",
-                'message' => "maspikTimeCheck"
-            ];
-        }
-    }
-    */
 
     // If we've made it this far, it's not spam
     return [
@@ -109,16 +64,34 @@ function maspik_submit_buffer(){
     return 4;
 }
 
+//add maspik_spam_key + full-name-maspik-hp to the array
+function maspik_add_spam_keys_to_array($arraytoadd,$arraytotakefrom){
+    $arraytoadd['maspik_spam_key'] = isset($arraytotakefrom['maspik_spam_key']) ? $arraytotakefrom['maspik_spam_key'] : '';
+    $arraytoadd['full-name-maspik-hp'] = isset($arraytotakefrom['full-name-maspik-hp']) ? $arraytotakefrom['full-name-maspik-hp'] : '';
+    return $arraytoadd;
+}
+
 
 function maspik_HP_name(){
     return "full-name-maspik-hp";
 }
 
+/**
+ * Returns the translatable label for the honeypot field (for aria-label, placeholder, visible label).
+ * Use esc_attr() in HTML attributes, esc_js() when outputting into JavaScript.
+ *
+ * @return string
+ */
+function maspik_honeypot_aria_label() {
+    return __( 'Leave this field empty', 'contact-forms-anti-spam' );
+}
 
-function GeneralCheck($ip, &$spam, &$reason, $post = "",$form = false) {
+
+function GeneralCheck($ip, &$spam, &$reason, $post = "", $form = false, $content_fields = null) {
     
-    $to_do_extra_spam_check = maspik_get_settings('maspikHoneypot') || maspik_get_settings('maspikTimeCheck') || maspik_get_settings('maspikYearCheck');
-    if( is_array($post) && $to_do_extra_spam_check ){ 
+    $to_do_extra_spam_check = efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool') || maspik_get_settings('maspikYearCheck');
+    // Skip honeypot/spam key for Block checkout – Store API doesn't send those fields.
+    if( is_array($post) && $to_do_extra_spam_check && $form != "ninjaforms" && $form != "woocommerce_checkout_block"){ 
         $extra_spam_check =  maspik_make_extra_spam_check($post) ;
         $is_spam = isset($extra_spam_check['spam']) ? $extra_spam_check['spam'] : $spam ;
         if($is_spam){
@@ -161,36 +134,45 @@ function GeneralCheck($ip, &$spam, &$reason, $post = "",$form = false) {
 
     // Check country blacklist only if is pro user
     if( cfes_is_supporting("country_location") && !empty($country_blacklist) ){ 
-        $xml_data = @file_get_contents("http://www.geoplugin.net/xml.gp?ip=" . $ip);
-        if ($xml_data) {
-            $xml = simplexml_load_string($xml_data);
-            $countryCode = $xml && $xml->geoplugin_countryCode && $xml->geoplugin_countryCode != "" ? (string) $xml->geoplugin_countryCode : "Unknown";
-            $continentCode = $xml && $xml->geoplugin_continentCode && $xml->geoplugin_continentCode != "" ? (string) $xml->geoplugin_continentCode : "Unknown";
+        $response = wp_remote_get("https://free.freeipapi.com/api/json/" . $ip);
+        if ( !is_wp_error($response) && wp_remote_retrieve_response_code($response) == 200 ) {
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+
+            // If IP belongs to Cloudflare edge (or similar), skip country check to avoid false positives
+            $asnOrganization = isset($data['asnOrganization']) ? $data['asnOrganization'] : '';
+            if (is_string($asnOrganization) && stripos($asnOrganization, 'cloudflare') !== false) {
+                // Do not block based on country/continent when request clearly comes from Cloudflare network.
+                // maspik_get_real_ip() should already try to resolve real client IP behind Cloudflare.
+            } else {
+                $countryCode = isset($data['countryCode']) && $data['countryCode'] != "" ? $data['countryCode'] : "Unknown";
+                $continentCode = isset($data['continentCode']) && $data['continentCode'] != "" ? $data['continentCode'] : "Unknown";
+                
+                $selected_country_codes = array();
+                $selected_continent_codes = array();
             
-            $selected_country_codes = array();
-            $selected_continent_codes = array();
-        
-            foreach ($country_blacklist as $item) {
-                if (strpos($item, 'Continent:') === 0) {
-                    $selected_continent_codes[] = substr($item, strlen('Continent:'));
-                } else {
-                    $selected_country_codes[] = $item;
+                foreach ($country_blacklist as $item) {
+                    if (strpos($item, 'Continent:') === 0) {
+                        $selected_continent_codes[] = substr($item, strlen('Continent:'));
+                    } else {
+                        $selected_country_codes[] = $item;
+                    }
                 }
-            }
-        
-            if ($AllowedOrBlockCountries === 'block') {
-                if (in_array($countryCode, $selected_country_codes) || in_array($continentCode, $selected_continent_codes)) {
-                    $spam = true;
-                    $message = "country_blacklist";
-                    $reason = "Country code $countryCode or continent $continentCode is blacklisted (block)";
-                    return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => $countryCode);
-                }
-            } elseif ($AllowedOrBlockCountries === 'allow') {
-                if (!in_array($countryCode, $selected_country_codes) && !in_array($continentCode, $selected_continent_codes)) {
-                    $spam = true;
-                    $message = "country_blacklist";
-                    $reason = "Country code $countryCode or continent $continentCode is not in the whitelist (allow)";
-                    return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => $countryCode);
+            
+                if ($AllowedOrBlockCountries === 'block') {
+                    if (in_array($countryCode, $selected_country_codes) || in_array($continentCode, $selected_continent_codes)) {
+                        $spam = true;
+                        $message = "country_blacklist";
+                        $reason = "Country code $countryCode or continent $continentCode is blacklisted (block)";
+                        return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => $countryCode);
+                    }
+                } elseif ($AllowedOrBlockCountries === 'allow') {
+                    if (!in_array($countryCode, $selected_country_codes) && !in_array($continentCode, $selected_continent_codes)) {
+                        $spam = true;
+                        $message = "country_blacklist";
+                        $reason = "Country code $countryCode or continent $continentCode is not in the whitelist (allow)";
+                        return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => $countryCode);
+                    }
                 }
             }
         }
@@ -253,19 +235,59 @@ function GeneralCheck($ip, &$spam, &$reason, $post = "",$form = false) {
         }
       }
     
-    //start check IP in api
-    $do_ip_api_check = maspik_get_settings('maspikDbCheck');
-    if ($do_ip_api_check && !$spam && $form) {
-        $exists = check_ip_in_api($ip,$form);
-        if($exists){
-            $reason = "Ip: $ip, exists in Maspik blacklist" ;
-            $message = "maspikDbCheck" ;
-            return array('spam' => true, 'reason' => $reason, 'message' => $message, 'value' => 1);
-        }
-    } 
-    //end check IP in api
 
-    
+    // AI-based spam check (Beta feature - will be Pro-only in future versions)
+    // Use $content_fields (only relevant visible fields) when available, otherwise fall back to full $post array.
+    if ( !$spam && $form && ( is_array($post) || is_array($content_fields) ) ) {
+        $ai_enabled = efas_get_spam_api('maspik_ai_enabled', 'bool');
+        if ( $ai_enabled ) {
+            try {
+                // Decide which raw fields to send to the AI layer.
+                // Prefer the explicitly prepared content fields array when provided.
+                $source_fields = array();
+
+                if ( is_array($content_fields) && ! empty($content_fields) ) {
+                    $source_fields = $content_fields;
+                } elseif ( is_array($post) && ! empty($post) ) {
+                    $source_fields = $post;
+                }
+
+                // If we have no fields at all (should be rare), skip AI to avoid useless calls.
+                if ( empty($source_fields) ) {
+                    // Continue without blocking – behave as if AI is disabled for this submission.
+                    return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => "");
+                }
+
+                // Prepare fields for AI analysis (handles Gravity Forms \"data\", Elementor form_fields, etc.)
+                $fields = maspik_prepare_fields_for_ai($source_fields, $form);
+
+                if ( !empty($fields) ) {
+                    $ai_result = maspik_ai_check_submission($fields,$form);
+                    
+                    // Only block if AI explicitly says it's spam AND we got a valid result
+                    if ( isset($ai_result['allow']) && $ai_result['allow'] === false ) {
+                        $spam = true;
+                        $reason = isset($ai_result['reason']) ? $ai_result['reason'] : 'AI detected spam';
+                        $message = 'ai_spam_check';
+                        return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => 1, 'type' => 'maspik_matrix');
+                    }
+                    // If AI check failed or returned allow=true, continue (don't block)
+                }
+            } catch ( Exception $e ) {
+                // On exception, don't block the form - log error and allow submission
+                if ( defined('WP_DEBUG') && WP_DEBUG ) {
+                    error_log('Maspik AI Check Exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                }
+                // Don't block - allow submission to continue
+            } catch ( Error $e ) {
+                // On fatal error, don't block the form - log error and allow submission
+                if ( defined('WP_DEBUG') && WP_DEBUG ) {
+                    error_log('Maspik AI Check Fatal Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+                }
+                // Don't block - allow submission to continue
+            }
+        }
+    }
 
     return array('spam' => $spam, 'reason' => $reason, 'message' => $message, 'value' => "");
 }
@@ -294,14 +316,14 @@ function validateTextField($field_value) {
  			if (strpos($bad_string, '*') !== false) {
                 // Handle wildcard pattern using fnmatch
                 if (fnmatch($bad_string, $field_value, FNM_CASEFOLD)) {
-                    $spam = "Input *$field_value* is blocked by wildcard pattern";
+                    $spam = "Input *!$field_value!* is blocked by wildcard pattern";
                     return array('spam' => $spam, 'message' => "text_blacklist");
                   	break;
                 }
             } else {
                 // Check if exist in string 
                 if (maspik_is_field_value_exist_in_string($bad_string, $field_value) ) {
-                    $spam =  "Forbidden input *$field_value*, because *$bad_string* is blocked";
+                    $spam =  "Forbidden input *!$field_value!*, because *!$bad_string!* is blocked";
                     return array('spam' => $spam, 'message' => "text_blacklist", "option_value" => $bad_string,  'label' => "text_blacklist");
                    	break;
                 }
@@ -323,14 +345,62 @@ function validateTextField($field_value) {
         if (is_numeric($MaxCharacters) && $MaxCharacters > 3) {
             $CountCharacters = mb_strlen($field_value); // Use mb_strlen for multibyte characters
             if ($CountCharacters > $MaxCharacters ) {
-                $spam = "More than *$MaxCharacters* characters";
+                $spam = "More than *!$MaxCharacters!* characters";
                 return array('spam' => $spam, 'message' => $message,"option_value" =>$MaxCharacters , 'label' => "MaxCharactersInTextField");
             }
 
             if ($CountCharacters < $MinCharacters ) {
-                $spam = "Less than *$MinCharacters* characters";
+                $spam = "Less than *!$MinCharacters!* characters";
                 return array('spam' => $spam, 'message' => $message,"option_value" =>$MinCharacters, 'label' => "MinCharactersInTextField");
             }
+        }
+    }
+
+    // Check for emojis (applies to both text and textarea fields)
+    if(maspik_get_settings('emoji_check')){
+        if (maspik_is_contains_emoji($field_value)) {
+            return array(
+                'spam' => "Emoji found in the field",
+                'message' => "emoji_check",
+                'option_value' => $field_value,
+                'label' => "emoji_check"
+            );
+        }
+    }
+
+    // Check for maximum number of links (applies to both text and textarea fields)
+    $max_linksAPI = is_numeric( efas_get_spam_api('contain_links', $type = "bool") ) ? efas_get_spam_api('contain_links', $type = "bool") : false;
+    $max_links = is_numeric( maspik_get_settings('contain_links') ) ? maspik_get_settings('contain_links') : $max_linksAPI;
+    
+    if (is_numeric($max_links) && maspik_get_settings('textarea_link_limit_toggle')) {
+        $max_links = intval($max_links);
+        
+        // Count HTML links and http(s) links
+        $patterns = array(
+            '/<a[^>]*href[^>]*>/i',            // HTML links (<a href="...")
+            '/https?:\/\/[^\s<>"\']+/i',       // http(s):// links with any valid URL chars
+            '/www\.[a-z0-9][-a-z0-9.]+\.[a-z0-9-]+/i'  // www.domain.tld with www.
+        );
+        
+        $num_links = 0;
+        foreach ($patterns as $pattern) {
+            $matches = array();
+            $count = preg_match_all($pattern, $field_value, $matches);
+            $num_links += ($count ? $count : 0);            
+        }
+        
+        // If max_links is 0, block any links. Otherwise, block if more than max_links
+        if (($max_links === 0 && $num_links > 0) || ($max_links > 0 && $num_links > $max_links)) {
+            $message = $max_links === 0 ? 
+                "Links are not allowed" : 
+                "Contains *!more than $max_links links!*";
+            
+            return array(
+                'spam' => $message,
+                'message' => "contain_links",
+                'option_value' => $num_links,
+                'label' => "contain_links"
+            );
         }
     }
 
@@ -392,22 +462,88 @@ function checkEmailForSpam($field_value) {
             }
 
             if (preg_match($bad_string_lower, $field_value_lower)) {
-                return "because regular expression pattern *'$bad_string'* is in the blacklist";
+                return "Email *!$field_value_lower!* is blocked because regular expression pattern *!$bad_string!* is in the blacklist";
             }
         }
         // Check for wildcard pattern using fnmatch
         elseif (strpbrk($bad_string_lower, '*?') !== false) {
             if (fnmatch($bad_string_lower, $field_value_lower, FNM_CASEFOLD)) {
-                return "because wildcard pattern *'$bad_string'* is in the blacklist";
+                return "Email *!$field_value_lower!* is blocked because wildcard pattern *!$bad_string!* is in the blacklist";
             }
         }else {
             if (maspik_is_field_value_exist_in_string($bad_string_lower, $field_value_lower,$make_space = 0)) {
-                return "because email *'$bad_string'* is in the blacklist";
+                return "Email *!$field_value_lower!* is blocked because email *!$bad_string!* is in the blacklist";
             }
         }
     }
 
     return false;
+}
+
+
+/**
+* URL check 
+**/
+function checkUrlForSpam($field_value) {
+    // Check if the field is empty
+    if (empty($field_value) || is_array($field_value)) {
+        return array('spam' => false, 'message' => '', 'label' => '', 'option_value' => '');
+    }
+
+    // Get the URL blacklist - cache this to avoid repeated database calls
+    static $url_blacklist = null;
+    if ($url_blacklist === null) {
+        $url_blacklist = efas_makeArray(maspik_get_settings('url_blacklist'));
+        
+        // Check if there are additional blacklist entries from the spam API
+        $additional_blacklist = efas_get_spam_api('url_field');
+        if ($additional_blacklist) {
+            $url_blacklist = array_merge($url_blacklist, $additional_blacklist);
+        }
+        
+        // Filter out empty entries once
+        $url_blacklist = array_filter($url_blacklist, function($item) {
+            return !empty(trim($item));
+        });
+    }
+
+    // Early return if no blacklist items
+    if (empty($url_blacklist)) {
+        return array('spam' => false, 'message' => '', 'label' => '', 'option_value' => '');
+    }
+
+    // Convert the field value to lowercase once
+    $field_value_lower = strtolower(trim($field_value));
+
+    // Loop through the blacklist entries
+    foreach ($url_blacklist as $bad_string) {
+        // Convert the blacklist string to lowercase once
+        $bad_string_lower = strtolower(trim($bad_string));
+        
+        // Check for wildcard pattern using fnmatch
+        if (strpbrk($bad_string_lower, '*?') !== false) {
+            if (fnmatch($bad_string_lower, $field_value_lower, FNM_CASEFOLD)) {
+                return array(
+                    'spam' => "URL *!$field_value_lower!* is blocked because wildcard pattern *!$bad_string!* is in the blacklist",
+                    'message' => 'url_blacklist',
+                    'label' => 'url_blacklist',
+                    'option_value' => $bad_string
+                );
+            }
+        } else {
+            // Use direct strpos for better performance
+            if (strpos($field_value_lower, $bad_string_lower) !== false) {
+                return array(
+                    'spam' => "URL *!$field_value_lower!* is blocked because *!$bad_string!* is in the blacklist",
+                    'message' => 'url_blacklist',
+                    'label' => 'url_blacklist',
+                    'option_value' => $bad_string
+                );
+            }
+        }
+    }
+
+    return array('spam' => false, 'message' => '', 'label' => '', 'option_value' => '');
 }
 
 
@@ -434,11 +570,11 @@ function checkTelForSpam($field_value) {
         $CountCharacters = mb_strlen(strval($field_value)); // Use mb_strlen for multibyte characters
         if (maspik_get_settings(maspik_toggle_match('MaxCharactersInPhoneField')) == 1) {
             if ($CountCharacters > $MaxCharacters) {
-                $reason = "More than $MaxCharacters characters in Phone Number";
+                $reason = "More than *!$MaxCharacters!* characters in Phone Number";
                 return array('valid' => false, 'reason' => $reason, 'message' => $message, "option_value" =>$MaxCharacters , 'label' => "MaxCharactersInPhoneField");
                 
             } elseif ($CountCharacters < $MinCharacters) {
-                $reason = "Less than $MinCharacters characters in Phone Number";
+                $reason = "Less than *!$MinCharacters!* characters in Phone Number";
                 return array('valid' => false, 'reason' => $reason, 'message' => $message,"option_value" =>$MinCharacters , 'label' => "MinCharactersInPhoneField");
             }
         }
@@ -467,7 +603,7 @@ function checkTelForSpam($field_value) {
         return array('valid' => true, 'reason' => 'Empty formats', 'message' => 'Empty formats');
     }
     
-    $reason = "Phone number *$field_value* does not meet the given format. ";
+    $reason = "Phone number *!$field_value!* does not meet the given format. ";
 
     foreach ($tel_formats as $format) {
         $format = trim($format);
@@ -482,13 +618,13 @@ function checkTelForSpam($field_value) {
             }
 
             if (preg_match($format, $field_value)) {
-                return array('valid' => true, 'reason' => "Regular expression match: *$format*", 'message' => 'tel_formats');
+                return array('valid' => true, 'reason' => "Regular expression match: *!$format!*", 'message' => 'tel_formats');
             }
         } 
         // Wildcard pattern
         elseif (strpbrk($format, '*?') !== false) {
             if (fnmatch($format, $field_value, FNM_CASEFOLD)) {
-                return array('valid' => true, 'reason' => "Wildcard pattern match: *$format*", 'message' => 'tel_formats');
+                return array('valid' => true, 'reason' => "Wildcard pattern match: *!$format!*", 'message' => 'tel_formats');
             }
         } 
     }    
@@ -506,10 +642,17 @@ function checkTextareaForSpam($field_value) {
 
 
     // Get the blacklist from options and merge with API data if available
-    $textarea_blacklist = maspik_get_settings('textarea_blacklist') ? efas_makeArray(maspik_get_settings('textarea_blacklist')) : array();
+    // Using text_blacklist for both text and textarea fields (unified)
+    $textarea_blacklist = maspik_get_settings('text_blacklist') ? efas_makeArray(maspik_get_settings('text_blacklist')) : array();
+    
+    // Merge API data from both text_field and textarea_field
+    if (efas_get_spam_api('text_field')) {
+        $text_blacklist_json = efas_get_spam_api('text_field');
+        $textarea_blacklist = array_merge($textarea_blacklist, $text_blacklist_json);
+    }
     if (efas_get_spam_api('textarea_field')) {
-        $blacklist_json = efas_get_spam_api('textarea_field');
-        $textarea_blacklist = array_merge($textarea_blacklist, $blacklist_json);
+        $textarea_blacklist_json = efas_get_spam_api('textarea_field');
+        $textarea_blacklist = array_merge($textarea_blacklist, $textarea_blacklist_json);
     }
     
     foreach ($textarea_blacklist as $bad_string) {
@@ -518,22 +661,26 @@ function checkTextareaForSpam($field_value) {
             $pattern = trim($bad_string, '*'); // Remove existing asterisks from each side
             $pattern = "*$pattern*";           // Add asterisks on both sides
             
-            if (fnmatch($pattern, $field_value, FNM_CASEFOLD)) {
-                return array(
-                    'spam' => "field value matches pattern *$bad_string*", 
-                    'message' => "textarea_field",
-                    'option_value' => $bad_string,
-                    'label' => "textarea_blacklist"
-                );
+            // Split long strings into chunks of 4000 characters to avoid fnmatch limit
+            $chunks = str_split($field_value, 4000);
+            foreach ($chunks as $chunk) {
+                if (fnmatch($pattern, $chunk, FNM_CASEFOLD)) {
+                    return array(
+                        'spam' => "field value matches pattern *!$bad_string!*", 
+                        'message' => "textarea_field",
+                        'option_value' => $bad_string,
+                        'label' => "text_blacklist"
+                    );
+                }
             }
         } 
         elseif (maspik_is_field_value_exist_in_string($bad_string, $field_value)) {
             // Regular word check
             return array(
-                'spam' => "field value includes *$bad_string*",
+                'spam' => "field value includes *!$bad_string!*",
                 'message' => "textarea_field",
                 'option_value' => $bad_string,
-                'label' => "textarea_blacklist"
+                'label' => "text_blacklist"
             );
         }
     }
@@ -606,7 +753,7 @@ function checkTextareaForSpam($field_value) {
             $detected_forbidden_lang = maspik_detect_language_in_string($lang_forbidden, $field_value);
 
             if (!empty($detected_forbidden_lang)) {
-                return array('spam' => "Forbidden language '$detected_forbidden_lang' exists", 'message' => "lang_forbidden", 'option_value' => $detected_forbidden_lang, 'label' => "lang_forbidden");
+                return array('spam' => "Forbidden language *!$detected_forbidden_lang!* exists", 'message' => "lang_forbidden", 'option_value' => $detected_forbidden_lang, 'label' => "lang_forbidden");
             }
         }
             
@@ -638,7 +785,7 @@ function checkTextareaForSpam($field_value) {
         if (($max_links === 0 && $num_links > 0) || ($max_links > 0 && $num_links > $max_links)) {
             $message = $max_links === 0 ? 
                 "Links are not allowed" : 
-                "Contains <u>more than $max_links links</u>";
+                "Contains *!more than $max_links links!*";
             
             return array(
                 'spam' => $message,
@@ -666,13 +813,13 @@ function checkTextareaForSpam($field_value) {
         
         // Check maximum characters if set, and if the character limit is greater than 2 (to)
         if (is_numeric($MaxCharacters) && $MaxCharacters > 2 && $CountCharacters > $MaxCharacters) {
-            $spam = "More than $MaxCharacters characters in Text Area field.";
+            $spam = "More than *!$MaxCharacters!* characters in Text Area field.";
             return array('spam' => $spam, 'message' =>  $message, "option_value" => $MaxCharacters , 'label' => "MaxCharactersInTextAreaField");
         }
         
         // Check minimum characters if set
         if (is_numeric($MinCharacters) && $MinCharacters > 0 && $CountCharacters < $MinCharacters) {
-            $spam = "Less than $MinCharacters characters in Text Area field.";
+            $spam = "Less than *!$MinCharacters!* characters in Text Area field.";
             return array('spam' => $spam, 'message' =>  $message, "option_value" => $MinCharacters , 'label' => "MinCharactersInTextAreaField");
         }
     }
@@ -686,218 +833,205 @@ function checkTextareaForSpam($field_value) {
 // Add custom JavaScript to the footer
 function Maspik_add_hp_js_to_footer() {
     // Check if any of the settings are enabled
-    $maspikHoneypot = maspik_get_settings('maspikHoneypot');
-    $maspikTimeCheck = maspik_get_settings('maspikTimeCheck');
+    $maspikHoneypot = efas_get_spam_api('maspikHoneypot', 'bool');
     $maspikYearCheck = maspik_get_settings('maspikYearCheck');
+    $maspikTimeCheck = efas_get_spam_api('maspikTimeCheck', 'bool');
 
     // Only add the code if at least one of the settings is enabled
-    if ($maspikHoneypot || $maspikTimeCheck || $maspikYearCheck) {
+    if ($maspikHoneypot || $maspikYearCheck || $maspikTimeCheck) {
         ?>
         <script type="text/javascript">
-        document.addEventListener("DOMContentLoaded", function() {
-
-            // Function to check if localStorage is available
-            function localStorageAvailable() {
-                try {
-                    var test = "__localStorage_test__";
-                    localStorage.setItem(test, test);
-                    localStorage.removeItem(test);
-                    return true;
-                } catch (e) {
+            // Check if the plugin is loaded only once
+            if (typeof window.maspikLoaded === "undefined") {
+                window.maspikLoaded = true;
+                
+                // Function to check if form should be excluded
+                function shouldExcludeForm(form) {
+                    // Check role/aria for search
+                    var role = (form.getAttribute('role') || '').toLowerCase();
+                    if (role === 'search') { return true; }
+                    var aria = (form.getAttribute('aria-label') || '').toLowerCase();
+                    if (aria.indexOf('search') !== -1) { return true; }
+                    
+                    // Check action URL for search patterns
+                    var action = (form.getAttribute('action') || '').toLowerCase();
+                    if (action.indexOf('?s=') !== -1 || action.indexOf('search=') !== -1 || /\/search(\/?|\?|$)/.test(action)) {
+                        return true;
+                    }
+                    
+                    // Check form classes
+                    var classes = form.className.split(' ');
+                    if (classes.some(function(className) {
+                        return className.toLowerCase().includes('search');
+                    })) {
+                        return true;
+                    }
+                    
+                    // Check for search inputs inside the form
+                    var searchInputs = form.querySelectorAll('input[type="search"], input.search, .search input, input[class*="search"], input[id*="search"], input[name="s"], input[name*="search"]');
+                    if (searchInputs.length > 0) {
+                        return true;
+                    }
+                    
+                    // Check for search-related classes in child elements
+                    var searchElements = form.querySelectorAll('.search, [class*="search"], [id*="search"], [aria-label*="search" i]');
+                    if (searchElements.length > 0) {
+                        return true;
+                    }
+                    
                     return false;
                 }
-            }
-
-            var exactTimeGlobal = null;
-            if (localStorageAvailable()) {
-                // Check if exactTimeGlobal is already stored in localStorage
-                exactTimeGlobal = localStorage.getItem('exactTimeGlobal');
-            }
-
-            // Common attributes and styles for hidden fields
-            var commonAttributes = {
-                'aria-hidden': "true", // Accessibility
-                tabindex: "-1", // Accessibility
-                autocomplete: "off", // Prevent browser autofill
-                class: "maspik-field"
-            };
-
-            var hiddenFieldStyles = {
-                position: "absolute",
-                left: "-99999px"
-            };
-
-            // Function to create a hidden field
-            function createHiddenField(attributes, styles) {
-                var field = document.createElement("input");
-                for (var attr in attributes) {
-                    field.setAttribute(attr, attributes[attr]);
+                
+                function isGetForm(form) {
+                    var method = (form.getAttribute("method") || "get").toLowerCase();
+                    return method === "get";
                 }
-                for (var style in styles) {
-                    field.style[style] = styles[style];
-                }
-                return field;
-            }
+                
+                <?php if ($maspikHoneypot || $maspikYearCheck) { ?>
+                // Function to add the hidden fields
+                function addMaspikHiddenFields(form) {
+                    // Check if the fields already exist
+                    if (form.querySelector(".maspik-field")) return;
 
-            // Function to add hidden fields to the form if they do not already exist
-            function addHiddenFields(formSelector, fieldClass) {
-                document.querySelectorAll(formSelector).forEach(function(form) {
-                    if (!form.querySelector('.maspik-field')) {
-                        if (<?php echo json_encode($maspikHoneypot); ?>) {
-                            var honeypot = createHiddenField({
-                                type: "text",
-                                name: "<?php echo maspik_HP_name(); ?>",
-                                id: "<?php echo maspik_HP_name(); ?>",
-                                class: fieldClass + " maspik-field",
-                                placeholder: "Leave this field empty"
-                            }, hiddenFieldStyles);
-                            form.appendChild(honeypot);
-                        }
+                    // Check if the form is already submitted
+                    if (form.dataset.maspikProcessed) return;
+                    form.dataset.maspikProcessed = true;
 
-                        if (<?php echo json_encode($maspikYearCheck); ?>) {
-                            var currentYearField = createHiddenField({
-                                type: "text",
-                                name: "Maspik-currentYear",
-                                id: "Maspik-currentYear",
-                                class: fieldClass + " maspik-field"
-                            }, hiddenFieldStyles);
-                            form.appendChild(currentYearField);
-                        }
+                    // Common attributes for the fields
+                    var commonAttributes = {
+                        "aria-hidden": "true",
+                        tabindex: "-1",
+                        autocomplete: "off",
+                        class: "maspik-field"
+                    };
 
-                        if (<?php echo json_encode($maspikTimeCheck); ?>) {
-                            var exactTimeField = createHiddenField({
-                                type: "text",
-                                name: "Maspik-exactTime",
-                                id: "Maspik-exactTime",
-                                class: fieldClass + " maspik-field"
-                            }, hiddenFieldStyles);
-                            form.appendChild(exactTimeField);
+                    var hiddenFieldStyles = {
+                        position: "absolute",
+                        left: "-99999px"
+                    };
+
+                    // Function to create a hidden field
+                    function createHiddenField(attributes, styles) {
+                        var field = document.createElement("input");
+                        for (var attr in attributes) {
+                            field.setAttribute(attr, attributes[attr]);
                         }
+                        for (var style in styles) {
+                            field.style[style] = styles[style];
+                        }
+                        return field;
                     }
-                });
-            }
 
-            // Add hidden fields to various form types
-            //Not suported ninja form
-            addHiddenFields('form.brxe-brf-pro-forms', 'brxe-brf-pro-forms-field-text');
-            //formidable
-            addHiddenFields('form.frm-show-form', 'frm_form_field');
-            addHiddenFields('form.elementor-form', 'elementor-field-textual');
-            //hello plus
-            addHiddenFields('form.ehp-form', 'hello-plus-field-text');
+                    <?php if ($maspikHoneypot) { ?>
+                    // Add Honeypot field if enabled
+                    var honeypot = createHiddenField({
+                        type: "text",
+                        name: "<?php echo maspik_HP_name(); ?>",
+                        class: form.className + " maspik-field",
+                        placeholder: "<?php echo esc_js( maspik_honeypot_aria_label() ); ?>",
+                        "aria-label": "<?php echo esc_js( maspik_honeypot_aria_label() ); ?>"
+                    }, hiddenFieldStyles);
+                    form.appendChild(honeypot);
+                    <?php } ?>
 
-            // Function to set the current year and exact time in the appropriate fields
-            function setDateFields() {
-                var currentYear = new Date().getFullYear();
+                    <?php if ($maspikYearCheck) { ?>
+                    // Add Year Check field if enabled
+                    var currentYearField = createHiddenField({
+                        type: "text",
+                        name: "Maspik-currentYear",
+                        class: form.className + " maspik-field"
+                    }, hiddenFieldStyles);
+                    form.appendChild(currentYearField);
 
-                if (!exactTimeGlobal) {
-                    exactTimeGlobal = Math.floor(Date.now() / 1000);
-                    if (localStorageAvailable()) {
-                        localStorage.setItem('exactTimeGlobal', exactTimeGlobal);
-                    }
+                    // Set the current year
+                    currentYearField.value = new Date().getFullYear();
+                    <?php } ?>
                 }
 
-                document.querySelectorAll('input[name="Maspik-currentYear"]').forEach(function(input) {
-                    input.value = currentYear;
+                //on load
+                document.addEventListener("DOMContentLoaded", function() {
+                    var forms = document.querySelectorAll("form");
+                    forms.forEach(function(form) {
+                        // Only add fields if form is not excluded and not method="get"
+                        if (!shouldExcludeForm(form) && !isGetForm(form)) {
+                            addMaspikHiddenFields(form);
+                        }
+                    });
                 });
 
-                document.querySelectorAll('input[name="Maspik-exactTime"]').forEach(function(input) {
-                    input.value = exactTimeGlobal;
-                });
-            }
-
-            // Initial call to set date fields
-            setDateFields();
-
-            // Use MutationObserver to detect AJAX form reloads and reset hidden fields
-            var observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'childList' && mutation.addedNodes.length) {
-                        setTimeout(function() {
-                            setDateFields();
-                        }, 500);
+                // Add the fields when the form is submitted
+                document.addEventListener("submit", function(e) {
+                    if (e.target.tagName === "FORM") {
+                        // Only add fields if form is not excluded and not method="get"
+                        if (!shouldExcludeForm(e.target) && !isGetForm(e.target)) {
+                            addMaspikHiddenFields(e.target);
+                            <?php if ($maspikYearCheck) { ?>
+                            //if exists in the e.target.tagName === "FORM" the field id Maspik-currentYear, add the current year to it
+                            if (e.target.querySelector("[name='Maspik-currentYear']")) {
+                                e.target.querySelector("[name='Maspik-currentYear']").value = new Date().getFullYear();
+                            }
+                            <?php } ?>
+                        }
                     }
-                });
-            });
+                }, true);
+                <?php } ?>
 
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
+                <?php if ($maspikTimeCheck) { ?>
+                // spam key
+                <?php $spam_key = maspik_get_spam_key(); // Get the unique spam key ?>
+                // Maspik add key to forms
+                document.addEventListener("DOMContentLoaded", function() {
+                    var spamKey = "<?php echo esc_js($spam_key); ?>";
+                    var input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = "maspik_spam_key";
+                    input.value = spamKey;
+                    input.setAttribute("autocomplete", "off");
+                    input.setAttribute("aria-hidden", "true");
+            
+                    // Select all forms
+                    var forms = document.querySelectorAll("form");
+                    forms.forEach(function(form) {
+                        // Only add the spam key if form is not excluded, not method="get", and key not already added
+                        if (!shouldExcludeForm(form) && !isGetForm(form) && !form.querySelector("input[name=maspik_spam_key]")) {
+                            form.appendChild(input.cloneNode(true));
+                        }
+                    });
+                });
+                
+                // add in other way, if the first way not working
+                document.addEventListener("submit", function(e) {
+                    if (e.target.tagName === "FORM") {
+                        // Only add the spam key if form is not excluded, not method="get", and key not already added
+                        if (!shouldExcludeForm(e.target) && !isGetForm(e.target) && !e.target.querySelector("input[name=maspik_spam_key]")) {
+                            var spamKey = "<?php echo esc_js($spam_key); ?>";
+                            var input = document.createElement("input");
+                            input.type = "hidden";
+                            input.name = "maspik_spam_key";
+                            input.value = spamKey;
+                            input.setAttribute("autocomplete", "off");
+                            input.setAttribute("aria-hidden", "true");
+                            e.target.appendChild(input);
+                        }
+                    }
+                }, true);
+                <?php } ?>
+            }
         </script>
         <style>
-        .maspik-field { display: none !important; }
+            .maspik-field { 
+                display: none !important; 
+                pointer-events: none !important;
+                opacity: 0 !important;
+                position: absolute !important;
+                left: -99999px !important;
+            }
         </style>
         <?php
     }
 }
 add_action('wp_footer', 'Maspik_add_hp_js_to_footer');
-
-/**
- * Injects the spam key field dynamically into forms with specific classes using JavaScript.
- */
-function maspik_add_spam_key_field_js() {
-    if (!maspik_get_settings("maspikTimeCheck") ) {
-        return;
-    }
-    // Define an array of classes for the forms you want to target
-    $target_classes = array(
-       /* 'wpcf7-form', // Add the class for Contact Form 7
-        'elementor-form',  // Add the class for Elementor Forms
-        'gform_wrapper',   // Add the class for Gravity Forms
-        'wpforms-form',    // Add the class for WPForms
-        'frm_forms form', // Add the class for formidable
-        'forminator-ui', // Add the class for Forminator option 1
-        'forminator_ajax', // Add the class for Forminator option 2
-        'forminator-custom-form', // Add the class for Forminator option 3  
-        'fluentform form', // Add the class for FluentForms
-        'everest-forms', // Add the class for Everest Forms
-        'jet-form-builder', // Add the class for Jet Form Builder
-        'nf-form-layout form', // Add the class for Ninja Forms
-        'nf-form-wrap form', // Add the class for Ninja Forms
-        '.nf-after-form-content', // Add the class for Ninja Forms
-        'gravityform', // Add the class for Gravity Forms
-        'woocommerce-review', // Add the class for WooCommerce Reviews
-        'woocommerce-registration', // Add the class for WooCommerce Registration
-        'bricks-form', // Add the class for Bricks Forms
-        'buddypress', // Add the class for BuddyPress
-        'buddyforms', // Add the class for BuddyForms
-        'wp-block-form', // Add the class for Gutenberg Forms */
-        'form' // for any form
-        // Add other form classes as needed
-
-    );
-
-    $spam_key = maspik_get_spam_key(); // Get the unique spam key
-
-    // Convert the classes array to a string for JavaScript
-    $target_classes_js = implode('", "', $target_classes);
-
-    // Add a script that adds the hidden field dynamically via JavaScript when the form is submitted
-    echo '
-        <script type="text/javascript">
-        // Maspik add key to forms
-            document.addEventListener("DOMContentLoaded", function() {
-                var spamKey = "' . esc_js( $spam_key ) . '";
-                var input = document.createElement("input");
-                input.type = "hidden";
-                input.name = "maspik_spam_key";
-                input.value = spamKey;
-                input.setAttribute("autocomplete", "off");
-                
-                // Select all forms with the specified classes
-                var forms = document.querySelectorAll("form");
-                forms.forEach(function(form) {
-                    // Only add the spam key if its not already added
-                    if (!form.querySelector("input[name=maspik_spam_key]")) {
-                        form.appendChild(input.cloneNode(true));
-                    }
-                });
-            });
-        </script>';
-}
-// add to all forms
-add_action('wp_footer', 'maspik_add_spam_key_field_js' , 99); // Add to wp_footer()
-// add to user registration form on admin side
-add_action('register_form', 'maspik_add_spam_key_field_js' , 99); // Add to wp_footer()
+add_action('register_form', 'Maspik_add_hp_js_to_footer' , 99);
 
 
 /**

@@ -10,17 +10,21 @@ function maspik_validate_formidable_general($errors, $values){
     
   $spam = false;
   $reason ="";
-  $ip =  maspik_get_real_ip();
+  $ip =  maspik_get_real_ip(); 
 
-  // Country IP Check 
-  $GeneralCheck = GeneralCheck($ip,$spam,$reason,$_POST,"formidable");
+  // Add $_POST['maspik_spam_key'] to the $_POST['item_meta']
+  $datatocheck = maspik_add_spam_keys_to_array($_POST['item_meta'],$_POST);
+
+  // General check (Country/IP, honeypot, spam key, AI Matrix, etc.)
+  $GeneralCheck = GeneralCheck($ip,$spam,$reason,$datatocheck,"formidable", $datatocheck);
   $spam = isset($GeneralCheck['spam']) ? $GeneralCheck['spam'] : false ;
   $reason = isset($GeneralCheck['reason']) ? $GeneralCheck['reason'] : false ;
   $message = isset($GeneralCheck['message']) ? $GeneralCheck['message'] : false ;
-  $spam_val = $GeneralCheck['value'] ? $GeneralCheck['value'] : false ;
-    
+  $spam_val = isset($GeneralCheck['value']) ? $GeneralCheck['value'] : false ;
+  $type = isset($GeneralCheck['type']) ? $GeneralCheck['type'] : 'General';
+
   if ( $spam) {
-    efas_add_to_log($type = "Country/IP",$reason, $_POST['item_meta'], "Formidable" , $message,  $spam_val);
+    efas_add_to_log($type, $reason, $_POST['item_meta'], "Formidable", $message, $spam_val);
     $errors['spam'] = cfas_get_error_text($message);
   }
 return $errors;
@@ -61,7 +65,7 @@ function maspik_validate_formidable_email($errors, $posted_field, $posted_value,
 
    if( $spam ) {
       $error_message = cfas_get_error_text();
-      efas_add_to_log($type = "email","Email $field_value is block $spam" , $_POST['item_meta'], "Formidable", "emails_blacklist", $spam_val);
+      efas_add_to_log($type = "email", $spam, $_POST['item_meta'], "Formidable", "emails_blacklist", $spam_val);
       $errors[ 'field'. $posted_field->id ] = $error_message;
    }
    return $errors;
