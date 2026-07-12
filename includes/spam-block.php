@@ -86,10 +86,36 @@ function maspik_honeypot_aria_label() {
     return __( 'Leave this field empty', 'contact-forms-anti-spam' );
 }
 
+/**
+ * Raise the minimum plugin_spam_likelihood (1–9) sent to Matrix for this HTTP request.
+ * Integrations call this instead of local blocking when checks move to the API.
+ *
+ * @param int         $min_score Floor 1–9; combined with other hints via max().
+ * @param string|null $referrer  Optional. When NeedPageurl is enabled, this is preferred for `maspik_referrer`
+ *                               over $_POST['referrer'] and HTTP Referer (see maspik_ai_check_submission).
+ */
+function maspik_matrix_raise_plugin_spam_likelihood_floor( int $min_score, $referrer = null ): void {
+    $min_score = max( 1, min( 9, $min_score ) );
+    $prev      = isset( $GLOBALS['maspik_matrix_plugin_spam_likelihood_floor'] ) ? (int) $GLOBALS['maspik_matrix_plugin_spam_likelihood_floor'] : 1;
+    $prev      = max( 1, min( 9, $prev ) );
+    $GLOBALS['maspik_matrix_plugin_spam_likelihood_floor'] = max( $prev, $min_score );
+    $GLOBALS['maspik_matrix_plugin_spam_likelihood_referrer'] = $referrer ? $referrer : null;
+}
+
+/**
+ * @return int Current floor 1–9 for plugin_spam_likelihood (default 1).
+ */
+function maspik_matrix_get_plugin_spam_likelihood_floor(): int {
+    if ( ! isset( $GLOBALS['maspik_matrix_plugin_spam_likelihood_floor'] ) ) {
+        return 1;
+    }
+    return max( 1, min( 9, (int) $GLOBALS['maspik_matrix_plugin_spam_likelihood_floor'] ) );
+}
+
 
 function GeneralCheck($ip, &$spam, &$reason, $post = "", $form = false, $content_fields = null) {
     
-    $to_do_extra_spam_check = efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool') || maspik_get_settings('maspikYearCheck');
+    $to_do_extra_spam_check = efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool');
     // Skip honeypot/spam key for Block checkout – Store API doesn't send those fields.
     if( is_array($post) && $to_do_extra_spam_check && $form != "ninjaforms" && $form != "woocommerce_checkout_block"){ 
         $extra_spam_check =  maspik_make_extra_spam_check($post) ;
@@ -134,7 +160,7 @@ function GeneralCheck($ip, &$spam, &$reason, $post = "", $form = false, $content
 
     // Check country blacklist only if is pro user
     if( cfes_is_supporting("country_location") && !empty($country_blacklist) ){ 
-        $response = wp_remote_get("https://free.freeipapi.com/api/json/" . $ip);
+        $response = wp_remote_get( 'https://free.freeipapi.com/api/json/' . rawurlencode( $ip ) );
         if ( !is_wp_error($response) && wp_remote_retrieve_response_code($response) == 200 ) {
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
@@ -261,9 +287,20 @@ function GeneralCheck($ip, &$spam, &$reason, $post = "", $form = false, $content
                 // Prepare fields for AI analysis (handles Gravity Forms \"data\", Elementor form_fields, etc.)
                 $fields = maspik_prepare_fields_for_ai($source_fields, $form);
 
-                if ( !empty($fields) ) {
-                    $ai_result = maspik_ai_check_submission($fields,$form);
-                    
+                if ( ! empty($fields) ) {
+                    $plugin_spam_likelihood = maspik_matrix_get_plugin_spam_likelihood_floor();
+                    $plugin_spam_likelihood  = (int) apply_filters(
+                        'maspik_matrix_plugin_spam_likelihood_1_9',
+                        $plugin_spam_likelihood,
+                        $fields,
+                        $form,
+                        is_array( $post ) ? $post : array(),
+                        is_array( $content_fields ) ? $content_fields : array()
+                    );
+                    $plugin_spam_likelihood = max( 1, min( 9, $plugin_spam_likelihood ) );
+
+                    $ai_result = maspik_ai_check_submission( $fields, $form, $plugin_spam_likelihood );
+
                     // Only block if AI explicitly says it's spam AND we got a valid result
                     if ( isset($ai_result['allow']) && $ai_result['allow'] === false ) {
                         $spam = true;
@@ -834,11 +871,10 @@ function checkTextareaForSpam($field_value) {
 function Maspik_add_hp_js_to_footer() {
     // Check if any of the settings are enabled
     $maspikHoneypot = efas_get_spam_api('maspikHoneypot', 'bool');
-    $maspikYearCheck = maspik_get_settings('maspikYearCheck');
     $maspikTimeCheck = efas_get_spam_api('maspikTimeCheck', 'bool');
 
     // Only add the code if at least one of the settings is enabled
-    if ($maspikHoneypot || $maspikYearCheck || $maspikTimeCheck) {
+    if ($maspikHoneypot || $maspikTimeCheck) {
         ?>
         <script type="text/javascript">
             // Check if the plugin is loaded only once
@@ -887,7 +923,7 @@ function Maspik_add_hp_js_to_footer() {
                     return method === "get";
                 }
                 
-                <?php if ($maspikHoneypot || $maspikYearCheck) { ?>
+                <?php if ($maspikHoneypot) { ?>
                 // Function to add the hidden fields
                 function addMaspikHiddenFields(form) {
                     // Check if the fields already exist
@@ -934,18 +970,6 @@ function Maspik_add_hp_js_to_footer() {
                     form.appendChild(honeypot);
                     <?php } ?>
 
-                    <?php if ($maspikYearCheck) { ?>
-                    // Add Year Check field if enabled
-                    var currentYearField = createHiddenField({
-                        type: "text",
-                        name: "Maspik-currentYear",
-                        class: form.className + " maspik-field"
-                    }, hiddenFieldStyles);
-                    form.appendChild(currentYearField);
-
-                    // Set the current year
-                    currentYearField.value = new Date().getFullYear();
-                    <?php } ?>
                 }
 
                 //on load
@@ -965,12 +989,6 @@ function Maspik_add_hp_js_to_footer() {
                         // Only add fields if form is not excluded and not method="get"
                         if (!shouldExcludeForm(e.target) && !isGetForm(e.target)) {
                             addMaspikHiddenFields(e.target);
-                            <?php if ($maspikYearCheck) { ?>
-                            //if exists in the e.target.tagName === "FORM" the field id Maspik-currentYear, add the current year to it
-                            if (e.target.querySelector("[name='Maspik-currentYear']")) {
-                                e.target.querySelector("[name='Maspik-currentYear']").value = new Date().getFullYear();
-                            }
-                            <?php } ?>
                         }
                     }
                 }, true);

@@ -87,7 +87,7 @@ function weekly_api_to_maspik_request_callback() {
 
 
     
-    // URL of the REST API endpoint
+    // URL of the REST API endpoint - receiver dill with security key
     $api_url = "https://receiver.wpmaspik.com/wp-json/statistics-maspik/v1/data?id=" . urlencode($domain) . "&key=plug1n";
 
     // Send the POST request

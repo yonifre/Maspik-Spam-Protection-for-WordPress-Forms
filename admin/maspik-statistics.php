@@ -31,7 +31,7 @@ class Maspik_Statistics {
             'maspik',
             __('Spam Statistics', 'contact-forms-anti-spam'),
             __('Spam Statistics', 'contact-forms-anti-spam'),
-            'manage_options',
+            'edit_pages',
             'maspik-statistics',
             array($this, 'render_page'),
             25
@@ -39,18 +39,36 @@ class Maspik_Statistics {
     }
 
     public function render_page() {
-        if (!current_user_can('manage_options')) {
+        if ( ! maspik_user_can_view_spam_log() ) {
             wp_die(__('You do not have sufficient permissions to access this page.', 'contact-forms-anti-spam'));
         }
 
         // Get current stats for JavaScript
-        $time_range = isset($_GET['range']) ? sanitize_text_field($_GET['range']) : 'month';
-        
-        // Handle custom date range
-        $start_date = isset($_GET['start_date']) ? sanitize_text_field($_GET['start_date']) : '';
-        $end_date = isset($_GET['end_date']) ? sanitize_text_field($_GET['end_date']) : '';
-        
-        $stats = $this->get_statistics_data($time_range, $start_date, $end_date);
+        $time_range = isset( $_GET['range'] ) ? sanitize_text_field( wp_unslash( $_GET['range'] ) ) : 'month';
+        $start_date = isset( $_GET['start_date'] ) ? sanitize_text_field( wp_unslash( $_GET['start_date'] ) ) : '';
+        $end_date   = isset( $_GET['end_date'] ) ? sanitize_text_field( wp_unslash( $_GET['end_date'] ) ) : '';
+
+        $time_range = $this->sanitize_statistics_range( $time_range );
+        if ( 'custom' === $time_range ) {
+            $start_date = $this->sanitize_statistics_date( $start_date );
+            $end_date   = $this->sanitize_statistics_date( $end_date );
+            if ( ! $start_date || ! $end_date ) {
+                $time_range = 'month';
+                $start_date = '';
+                $end_date   = '';
+            }
+        }
+
+        $stats = $this->get_statistics_data( $time_range, $start_date, $end_date );
+
+        if ( ! empty( $stats['error'] ) ) {
+            echo '<div class="notice notice-error"><p>';
+            echo esc_html( $stats['message'] ?? __( 'An error occurred while fetching statistics.', 'contact-forms-anti-spam' ) );
+            echo '</p></div>';
+            return;
+        }
+
+        $time_range = isset( $stats['time_range'] ) ? $stats['time_range'] : $time_range;
 
         // Prepare data for JavaScript and inline script
         $timeline_data = array_map(function($item) {
@@ -151,259 +169,295 @@ class Maspik_Statistics {
             $countries_for_js = $this->get_country_codes();
         }
 
-        // Output data directly to the page
-        echo "<script>
-            var maspikStats = {
-                timelineData: " . json_encode($timeline_data) . ",
-                countriesData: " . json_encode($stats['countries_data']) . ",
-                sourcesData: " . json_encode($stats['sources_data']) . ",
-                mapData: " . json_encode($map_data) . ",
-                countryCodes: " . json_encode($countries_for_js) . ",
-                nonce: '" . $ajax_nonce . "',
-                translations: {
-                    blockedSpam: '" . esc_js(__('Blocked Spam', 'contact-forms-anti-spam')) . "',
-                    spamAttempts: '" . esc_js(__('Spam Attempts', 'contact-forms-anti-spam')) . "'
-                }
-            };
-        </script>";
+        $json_flags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE;
+        $maspik_stats_payload = array(
+            'timelineData'  => $timeline_data,
+            'countriesData' => $stats['countries_data'],
+            'sourcesData'   => $stats['sources_data'],
+            'mapData'       => $map_data,
+            'countryCodes'  => $countries_for_js,
+            'nonce'         => $ajax_nonce,
+            'translations'  => array(
+                'blockedSpam'  => __( 'Blocked Spam', 'contact-forms-anti-spam' ),
+                'spamAttempts' => __( 'Spam Attempts', 'contact-forms-anti-spam' ),
+            ),
+        );
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode with JSON_HEX_* prevents script breakout.
+        echo '<script>var maspikStats = ' . wp_json_encode( $maspik_stats_payload, $json_flags ) . ';</script>';
 
         // Render the page
         include(plugin_dir_path(__FILE__) . 'views/statistics-page.php');
     }
 
-    private function get_statistics_data($time_range, $start_date = '', $end_date = '') {
+    /** @var string[] */
+    private static $statistics_allowed_ranges = array( 'day', 'week', 'month', 'year', 'custom' );
+
+    /** @var array<string, string> */
+    private static $statistics_allowed_intervals = array(
+        'day'   => '1 DAY',
+        'week'  => '7 DAY',
+        'month' => '30 DAY',
+        'year'  => '1 YEAR',
+    );
+
+    private function sanitize_statistics_range( $range ) {
+        $range = sanitize_key( $range );
+        return in_array( $range, self::$statistics_allowed_ranges, true ) ? $range : 'month';
+    }
+
+    private function sanitize_statistics_date( $date ) {
+        $date = sanitize_text_field( (string) $date );
+        return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $date ) ? $date : '';
+    }
+
+    /**
+     * @return array{type: string, start?: string, end?: string, interval?: string, range_key?: string, date_format?: string}
+     */
+    private function resolve_period_filter( $time_range, $start_date, $end_date ) {
+        $time_range = $this->sanitize_statistics_range( $time_range );
+
+        if ( 'custom' === $time_range ) {
+            $start = $this->sanitize_statistics_date( $start_date );
+            $end   = $this->sanitize_statistics_date( $end_date );
+            if ( $start && $end && strtotime( $start ) <= strtotime( $end ) ) {
+                return array(
+                    'type'  => 'between',
+                    'start' => $start . ' 00:00:00',
+                    'end'   => $end . ' 23:59:59',
+                );
+            }
+            $time_range = 'month';
+        }
+
+        $range_key = $time_range;
+        $interval  = self::$statistics_allowed_intervals[ $range_key ] ?? self::$statistics_allowed_intervals['month'];
+        $formats   = array(
+            'day'   => '%H:00',
+            'week'  => '%Y-%m-%d',
+            'month' => '%Y-%m-%d',
+            'year'  => '%Y-%m',
+        );
+
+        return array(
+            'type'        => 'interval',
+            'range_key'   => $range_key,
+            'interval'    => $interval,
+            'date_format' => $formats[ $range_key ] ?? $formats['month'],
+        );
+    }
+
+    /**
+     * @param array $filter Current period from resolve_period_filter().
+     * @return array
+     */
+    private function resolve_previous_period_filter( array $filter ) {
+        if ( 'between' === $filter['type'] ) {
+            $start_date = substr( $filter['start'], 0, 10 );
+            $end_date   = substr( $filter['end'], 0, 10 );
+            $date_diff  = max( 1, (int) round( ( strtotime( $end_date ) - strtotime( $start_date ) ) / 86400 ) );
+            $prev_end   = gmdate( 'Y-m-d', strtotime( $start_date . ' -1 day' ) );
+            $prev_start = gmdate( 'Y-m-d', strtotime( $prev_end . " -{$date_diff} days" ) );
+
+            return array(
+                'type'  => 'between',
+                'start' => $prev_start . ' 00:00:00',
+                'end'   => $prev_end . ' 23:59:59',
+            );
+        }
+
+        $literal_by_range = array(
+            'day'   => 'DATE(spam_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)',
+            'week'  => 'spam_date BETWEEN DATE_SUB(DATE_SUB(NOW(), INTERVAL 7 DAY), INTERVAL 7 DAY) AND DATE_SUB(NOW(), INTERVAL 7 DAY)',
+            'month' => 'spam_date BETWEEN DATE_SUB(DATE_SUB(NOW(), INTERVAL 30 DAY), INTERVAL 30 DAY) AND DATE_SUB(NOW(), INTERVAL 30 DAY)',
+            'year'  => 'spam_date BETWEEN DATE_SUB(DATE_SUB(NOW(), INTERVAL 1 YEAR), INTERVAL 1 YEAR) AND DATE_SUB(NOW(), INTERVAL 1 YEAR)',
+        );
+        $range_key = $filter['range_key'] ?? 'month';
+
+        return array(
+            'type'      => 'literal',
+            'where_sql' => $literal_by_range[ $range_key ] ?? $literal_by_range['month'],
+        );
+    }
+
+    private function period_count( array $filter ) {
         global $wpdb;
         $table = maspik_get_logtable();
 
-        if (!maspik_logtable_exists()) {
-            return array(
-                'error' => true,
-                'message' => __('The spam log table does not exist.', 'contact-forms-anti-spam')
+        if ( 'between' === $filter['type'] ) {
+            return (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$table} WHERE spam_date BETWEEN %s AND %s",
+                    $filter['start'],
+                    $filter['end']
+                )
             );
         }
 
-        // Set time interval based on range
-        $where_clause = "";
-        if ($time_range === 'custom' && !empty($start_date) && !empty($end_date)) {
-            $where_clause = $wpdb->prepare("spam_date BETWEEN %s AND %s", 
-                $start_date . ' 00:00:00', 
-                $end_date . ' 23:59:59'
+        if ( 'literal' === $filter['type'] ) {
+            return (int) $wpdb->get_var(
+                "SELECT COUNT(*) FROM {$table} WHERE {$filter['where_sql']}"
             );
-            $interval = "CUSTOM";
-        } else {
-            switch ($time_range) {
-                case 'day':
-                    $interval = '1 DAY';
-                    $group_by = 'HOUR(spam_date)';
-                    $date_format = '%H:00';
-                    break;
-                case 'week':
-                    $interval = '7 DAY';
-                    $group_by = 'DATE(spam_date)';
-                    $date_format = '%Y-%m-%d';
-                    break;
-                case 'year':
-                    $interval = '1 YEAR';
-                    $group_by = 'MONTH(spam_date)';
-                    $date_format = '%Y-%m';
-                    break;
-                default: // month
-                    $interval = '30 DAY';
-                    $group_by = 'DATE(spam_date)';
-                    $date_format = '%Y-%m-%d';
-            }
-            $where_clause = "spam_date >= DATE_SUB(NOW(), INTERVAL $interval)";
         }
+
+        $interval = $filter['interval'];
+        return (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$table} WHERE spam_date >= DATE_SUB(NOW(), INTERVAL {$interval})"
+        );
+    }
+
+    /**
+     * @param string $select_body Columns and aggregates (no SELECT keyword).
+     * @param string $suffix      GROUP BY / ORDER BY / LIMIT (no leading WHERE).
+     */
+    private function period_select( array $filter, $select_body, $suffix = '' ) {
+        global $wpdb;
+        $table  = maspik_get_logtable();
+        $suffix = $suffix ? ' ' . $suffix : '';
+
+        if ( 'between' === $filter['type'] ) {
+            return $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT {$select_body} FROM {$table} WHERE spam_date BETWEEN %s AND %s{$suffix}",
+                    $filter['start'],
+                    $filter['end']
+                )
+            );
+        }
+
+        if ( 'literal' === $filter['type'] ) {
+            return $wpdb->get_results(
+                "SELECT {$select_body} FROM {$table} WHERE {$filter['where_sql']}{$suffix}"
+            );
+        }
+
+        $interval = $filter['interval'];
+        return $wpdb->get_results(
+            "SELECT {$select_body} FROM {$table} WHERE spam_date >= DATE_SUB(NOW(), INTERVAL {$interval}){$suffix}"
+        );
+    }
+
+    private function period_timeline_interval( array $filter, $date_format ) {
+        global $wpdb;
+        $table    = maspik_get_logtable();
+        $interval = $filter['interval'];
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE_FORMAT(spam_date, %s) AS period, COUNT(*) AS count
+                 FROM {$table}
+                 WHERE spam_date >= DATE_SUB(NOW(), INTERVAL {$interval})
+                 GROUP BY period
+                 ORDER BY period ASC",
+                $date_format
+            )
+        );
+    }
+
+    private function period_timeline_between( array $filter ) {
+        global $wpdb;
+        $table = maspik_get_logtable();
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT DATE(spam_date) AS period, COUNT(*) AS count
+                 FROM {$table}
+                 WHERE spam_date BETWEEN %s AND %s
+                 GROUP BY DATE(spam_date)
+                 ORDER BY period ASC",
+                $filter['start'],
+                $filter['end']
+            )
+        );
+    }
+
+    private function get_statistics_data($time_range, $start_date = '', $end_date = '') {
+        if (!maspik_logtable_exists()) {
+            return $this->statistics_error_result(
+                __('The spam log table does not exist.', 'contact-forms-anti-spam'),
+                $time_range
+            );
+        }
+
+        $period_filter   = $this->resolve_period_filter( $time_range, $start_date, $end_date );
+        $is_custom_range = ( 'between' === $period_filter['type'] );
+        $display_range   = $is_custom_range ? 'custom' : ( $period_filter['range_key'] ?? 'month' );
 
         try {
-            // Get total blocked
-            $total_blocked = $wpdb->get_var("
-                SELECT COUNT(*)
-                FROM $table
-                WHERE $where_clause"
-            );
+            $total_blocked = $this->period_count( $period_filter );
 
-            // Get timeline data with improved date handling
-            if ($time_range === 'custom' && !empty($start_date) && !empty($end_date)) {
-                // For custom range, ensure data exists for every day in the range
-                $timeline_data = $wpdb->get_results($wpdb->prepare("
-                    SELECT 
-                        DATE(spam_date) as period,
-                        COUNT(*) as count
-                    FROM $table
-                    WHERE spam_date BETWEEN %s AND %s
-                    GROUP BY DATE(spam_date)
-                    ORDER BY period ASC",
-                    $start_date . ' 00:00:00',
-                    $end_date . ' 23:59:59'
-                ));
+            if ( $is_custom_range ) {
+                $custom_start = substr( $period_filter['start'], 0, 10 );
+                $custom_end   = substr( $period_filter['end'], 0, 10 );
+                $timeline_data = $this->period_timeline_between( $period_filter );
 
-                // Fill missing days with value 0
                 $filled_timeline = array();
-                $current_date = new DateTime($start_date);
-                $end_date_obj = new DateTime($end_date);
-                
-                while ($current_date <= $end_date_obj) {
-                    $current_date_str = $current_date->format('Y-m-d');
-                    $found = false;
-                    
-                    foreach ($timeline_data as $data) {
-                        if ($data->period === $current_date_str) {
+                $current_date    = new DateTime( $custom_start );
+                $end_date_obj    = new DateTime( $custom_end );
+
+                while ( $current_date <= $end_date_obj ) {
+                    $current_date_str = $current_date->format( 'Y-m-d' );
+                    $found            = false;
+
+                    foreach ( $timeline_data as $data ) {
+                        if ( (string) $data->period === $current_date_str ) {
                             $filled_timeline[] = $data;
-                            $found = true;
+                            $found             = true;
                             break;
                         }
                     }
-                    
-                    if (!$found) {
-                        $filled_timeline[] = (object)array(
+
+                    if ( ! $found ) {
+                        $filled_timeline[] = (object) array(
                             'period' => $current_date_str,
-                            'count' => 0
+                            'count'  => 0,
                         );
                     }
-                    
-                    $current_date->modify('+1 day');
-                }
-                
-                $timeline_data = $filled_timeline;
 
+                    $current_date->modify( '+1 day' );
+                }
+
+                $timeline_data = $filled_timeline;
             } else {
-                // Existing code for regular time ranges
-                $timeline_data = $wpdb->get_results($wpdb->prepare("
-                    SELECT 
-                        DATE_FORMAT(spam_date, %s) as period,
-                        COUNT(*) as count
-                    FROM $table
-                    WHERE $where_clause
-                    GROUP BY period
-                    ORDER BY period ASC",
-                    $date_format
-                ));
+                $timeline_data = $this->period_timeline_interval(
+                    $period_filter,
+                    $period_filter['date_format']
+                );
             }
 
-            // Get top countries
             $total_for_period = $total_blocked;
 
-            $countries_data = $wpdb->get_results("
-                SELECT 
-                    COALESCE(spam_country, 'Unknown') as country,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                GROUP BY country
-                HAVING count > 0
-                ORDER BY count DESC
-                LIMIT 10"
+            $countries_data = $this->period_select(
+                $period_filter,
+                "COALESCE(spam_country, 'Unknown') AS country, COUNT(*) AS count",
+                'GROUP BY country HAVING count > 0 ORDER BY count DESC LIMIT 10'
             );
 
-            // Get spam sources
-            $sources_data = $wpdb->get_results("
-                SELECT 
-                    COALESCE(SUBSTRING_INDEX(spam_source, '|||', 1), 'Unknown') as source,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                GROUP BY source
-                HAVING count > 0
-                ORDER BY count DESC
-                LIMIT 10"
+            $sources_data = $this->period_select(
+                $period_filter,
+                "COALESCE(SUBSTRING_INDEX(spam_source, '|||', 1), 'Unknown') AS source, COUNT(*) AS count",
+                'GROUP BY source HAVING count > 0 ORDER BY count DESC LIMIT 10'
             );
 
-            // Get top IPs
-            $top_ips = $wpdb->get_results("
-                SELECT 
-                    spam_ip as ip,
-                    COALESCE(spam_country, 'Unknown') as country,
-                    COUNT(*) as count,
-                    MAX(spam_date) as last_attempt
-                FROM $table
-                WHERE $where_clause
-                GROUP BY ip, country
-                ORDER BY count DESC
-                LIMIT 10"
-            );
-            
-            // Get email domains analysis
-            $email_domains = $wpdb->get_results("
-                SELECT 
-                    SUBSTRING_INDEX(spamsrc_val, '@', -1) as domain,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                AND spam_type = 'email'
-                AND spamsrc_val LIKE '%@%'
-                GROUP BY domain
-                ORDER BY count DESC
-                LIMIT 10"
-            );
-            
-            // Get user agent analysis
-            $user_agents = $wpdb->get_results("
-                SELECT 
-                    SUBSTRING(spam_agent, 1, 50) as agent,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                AND spam_agent IS NOT NULL
-                AND spam_agent != ''
-                GROUP BY agent
-                ORDER BY count DESC
-                LIMIT 10"
+            $top_ips = $this->period_select(
+                $period_filter,
+                "spam_ip AS ip, COALESCE(spam_country, 'Unknown') AS country, COUNT(*) AS count, MAX(spam_date) AS last_attempt",
+                'GROUP BY ip, country ORDER BY count DESC LIMIT 10'
             );
 
-            // Calculate trends (compare to previous period)
-            $previous_where = "";
-            if ($time_range === 'custom' && !empty($start_date) && !empty($end_date)) {
-                $date_diff = (strtotime($end_date) - strtotime($start_date)) / 86400; // days difference
-                $prev_end = date('Y-m-d', strtotime($start_date . ' -1 day'));
-                $prev_start = date('Y-m-d', strtotime($prev_end . " -$date_diff days"));
-                $previous_where = $wpdb->prepare(
-                    "spam_date BETWEEN %s AND %s", 
-                    $prev_start . ' 00:00:00', 
-                    $prev_end . ' 23:59:59'
-                );
-            } else {
-                // For predefined time ranges - calculate based on time range type
-                switch ($time_range) {
-                    case 'today':
-                        $previous_where = "DATE(spam_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
-                        break;
-                        
-                    case 'yesterday':
-                        $previous_where = "DATE(spam_date) = DATE_SUB(CURDATE(), INTERVAL 2 DAY)";
-                        break;
-                        
-                    case 'week':
-                        $previous_where = "spam_date BETWEEN 
-                            DATE_SUB(DATE_SUB(NOW(), INTERVAL 1 WEEK), INTERVAL 1 WEEK) 
-                            AND DATE_SUB(NOW(), INTERVAL 1 WEEK)";
-                        break;
-                        
-                    case 'month':
-                        $previous_where = "spam_date BETWEEN 
-                            DATE_SUB(DATE_SUB(NOW(), INTERVAL 1 MONTH), INTERVAL 1 MONTH) 
-                            AND DATE_SUB(NOW(), INTERVAL 1 MONTH)";
-                        break;
-                        
-                    case 'year':
-                        $previous_where = "spam_date BETWEEN 
-                            DATE_SUB(DATE_SUB(NOW(), INTERVAL 1 YEAR), INTERVAL 1 YEAR) 
-                            AND DATE_SUB(NOW(), INTERVAL 1 YEAR)";
-                        break;
-                        
-                    default:
-                        // Default - last 30 days
-                        $previous_where = "spam_date BETWEEN 
-                            DATE_SUB(DATE_SUB(NOW(), INTERVAL 30 DAY), INTERVAL 30 DAY) 
-                            AND DATE_SUB(NOW(), INTERVAL 30 DAY)";
-                }
-            }
-            
-            $previous_total = $wpdb->get_var("
-                SELECT COUNT(*)
-                FROM $table
-                WHERE $previous_where"
+            $email_domains = $this->period_select(
+                $period_filter,
+                "SUBSTRING_INDEX(spamsrc_val, '@', -1) AS domain, COUNT(*) AS count",
+                "AND spam_type = 'email' AND spamsrc_val LIKE '%@%' GROUP BY domain ORDER BY count DESC LIMIT 10"
             );
+
+            $user_agents = $this->period_select(
+                $period_filter,
+                'SUBSTRING(spam_agent, 1, 50) AS agent, COUNT(*) AS count',
+                "AND spam_agent IS NOT NULL AND spam_agent != '' GROUP BY agent ORDER BY count DESC LIMIT 10"
+            );
+
+            $previous_filter = $this->resolve_previous_period_filter( $period_filter );
+            $previous_total  = $this->period_count( $previous_filter );
             
             $trend_percentage = 0;
             $trend_direction = 'none';
@@ -413,56 +467,28 @@ class Maspik_Statistics {
                 $trend_direction = $trend_percentage > 0 ? 'up' : ($trend_percentage < 0 ? 'down' : 'none');
             }
 
-            // Get top countries with extended data
-            $top_countries = $wpdb->get_results("
-                SELECT 
-                    COALESCE(spam_country, 'Unknown') as country,
-                    COUNT(*) as count,
-                    MAX(spam_date) as last_attempt
-                FROM $table
-                WHERE $where_clause
-                GROUP BY country
-                ORDER BY count DESC
-                LIMIT 10"
+            $top_countries = $this->period_select(
+                $period_filter,
+                "COALESCE(spam_country, 'Unknown') AS country, COUNT(*) AS count, MAX(spam_date) AS last_attempt",
+                'GROUP BY country ORDER BY count DESC LIMIT 10'
             );
-            
-            // Get top pages (URLs) attacked
-            $top_pages = $wpdb->get_results("
-                SELECT 
-                    SUBSTRING_INDEX(spam_source, '|||', -1) as page_url,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                AND spam_source LIKE '%|||%'
-                GROUP BY page_url
-                ORDER BY count DESC
-                LIMIT 10"
+
+            $top_pages = $this->period_select(
+                $period_filter,
+                "SUBSTRING_INDEX(spam_source, '|||', -1) AS page_url, COUNT(*) AS count",
+                "AND spam_source LIKE '%|||%' GROUP BY page_url ORDER BY count DESC LIMIT 10"
             );
-            
-            // Get top spam types
-            $top_types = $wpdb->get_results("
-                SELECT 
-                    COALESCE(spam_type, 'Unknown') as type,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                GROUP BY type
-                ORDER BY count DESC
-                LIMIT 10"
+
+            $top_types = $this->period_select(
+                $period_filter,
+                "COALESCE(spam_type, 'Unknown') AS type, COUNT(*) AS count",
+                'GROUP BY type ORDER BY count DESC LIMIT 10'
             );
-            
-            // Get top spam reasons
-            $top_reasons = $wpdb->get_results("
-                SELECT 
-                    COALESCE(spam_value, 'Unknown') as reason,
-                    COUNT(*) as count
-                FROM $table
-                WHERE $where_clause
-                AND spam_value IS NOT NULL 
-                AND spam_value != ''
-                GROUP BY reason
-                ORDER BY count DESC
-                LIMIT 10"
+
+            $top_reasons = $this->period_select(
+                $period_filter,
+                "COALESCE(spam_value, 'Unknown') AS reason, COUNT(*) AS count",
+                "AND spam_value IS NOT NULL AND spam_value != '' GROUP BY reason ORDER BY count DESC LIMIT 10"
             );
             
             // Add percentages to all new metrics
@@ -519,33 +545,44 @@ class Maspik_Statistics {
                 'top_pages' => $top_pages,
                 'top_types' => $top_types,
                 'top_reasons' => $top_reasons,
-                'time_range' => $time_range,
+                'time_range' => $display_range,
                 'trend_percentage' => $trend_percentage,
                 'trend_direction' => $trend_direction,
                 'error' => false
             );
 
         } catch (Exception $e) {
-            
-            return array(
-                'error' => true,
-                'message' => __('An error occurred while fetching statistics.', 'contact-forms-anti-spam'),
-                'total_blocked' => 0,
-                'timeline_data' => array(),
-                'countries_data' => array(),
-                'sources_data' => array(),
-                'top_ips' => array(),
-                'email_domains' => array(),
-                'user_agents' => array(),
-                'top_countries' => array(),
-                'top_pages' => array(),
-                'top_types' => array(),
-                'top_reasons' => array(),
-                'time_range' => $time_range,
-                'trend_percentage' => 0,
-                'trend_direction' => 'none'
+            return $this->statistics_error_result(
+                __('An error occurred while fetching statistics.', 'contact-forms-anti-spam'),
+                isset( $display_range ) ? $display_range : $time_range
             );
         }
+    }
+
+    /**
+     * @param string $message     User-facing error text.
+     * @param string $time_range  Active range key for the UI.
+     * @return array
+     */
+    private function statistics_error_result( $message, $time_range = 'month' ) {
+        return array(
+            'error'            => true,
+            'message'          => $message,
+            'total_blocked'    => 0,
+            'timeline_data'    => array(),
+            'countries_data'   => array(),
+            'sources_data'     => array(),
+            'top_ips'          => array(),
+            'email_domains'    => array(),
+            'user_agents'      => array(),
+            'top_countries'    => array(),
+            'top_pages'        => array(),
+            'top_types'        => array(),
+            'top_reasons'      => array(),
+            'time_range'       => $this->sanitize_statistics_range( $time_range ),
+            'trend_percentage' => 0,
+            'trend_direction'  => 'none',
+        );
     }
 
     private function get_country_codes() {

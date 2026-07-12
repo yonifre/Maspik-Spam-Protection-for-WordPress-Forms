@@ -133,12 +133,6 @@ function add_maspikhp_html_to_everest($form_data) {
         </div>';
     }
 
-    if (maspik_get_settings('maspikYearCheck')) {
-        $addhtml .= '<div class="evf-honeypot-container evf-field-hp maspik-field">
-            <label for="Maspik-currentYear" class="evf-field-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-            <input type="text" name="Maspik-currentYear" id="Maspik-currentYear" class="input-text" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '">
-        </div>';
-    }
 
     // Output the additional HTML before the submit button
     echo $addhtml;

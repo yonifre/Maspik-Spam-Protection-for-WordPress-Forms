@@ -6,19 +6,23 @@ if ( ! defined( 'WPINC' ) ) {
 
 // Playground Form
 
-add_action('wp_ajax_maspik_handle_playground_form', 'maspik_handle_playground_form');
-add_action('wp_ajax_nopriv_maspik_handle_playground_form', 'maspik_handle_playground_form');
+add_action( 'wp_ajax_maspik_handle_playground_form', 'maspik_handle_playground_form' );
 
 function maspik_handle_playground_form() {
-    
+    check_ajax_referer( 'maspik_playground_nonce', 'nonce' );
 
-    //check_ajax_referer('contact_form_nonce', 'nonce');
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error(
+            array( 'message' => __( 'You do not have permission to use the playground.', 'contact-forms-anti-spam' ) ),
+            403
+        );
+    }
 
-    $name = sanitize_text_field(wp_unslash($_POST['userName']));
-    $email = sanitize_text_field(wp_unslash($_POST['userEmail']));
-    $tel = sanitize_text_field(wp_unslash($_POST['tel']));
-    $url = sanitize_url(wp_unslash($_POST['url']));
-    $content = wp_kses(wp_unslash($_POST['content']), array('a' => array('href' => array(), 'title' => array())));
+    $name = isset( $_POST['userName'] ) ? sanitize_text_field( wp_unslash( $_POST['userName'] ) ) : '';
+    $email   = isset( $_POST['userEmail'] ) ? sanitize_text_field( wp_unslash( $_POST['userEmail'] ) ) : '';
+    $tel     = isset( $_POST['tel'] ) ? sanitize_text_field( wp_unslash( $_POST['tel'] ) ) : '';
+    $url     = isset( $_POST['url'] ) ? sanitize_url( wp_unslash( $_POST['url'] ) ) : '';
+    $content = isset( $_POST['content'] ) ? wp_kses( wp_unslash( $_POST['content'] ), array( 'a' => array( 'href' => array(), 'title' => array() ) ) ) : '';
 
     // Example: Save form data to database or send an email
     $success = 1;

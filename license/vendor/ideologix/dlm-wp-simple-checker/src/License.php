@@ -228,7 +228,7 @@ class License {
 		]);
 
 		if($result->is_error()) {
-			return new \WP_Error($result->get_code(), $result->get_message());
+			return new \WP_Error( $result->get_code(), $result->get_message(), $result->get_data() );
 		}
 
 		$data = $result->get_data();

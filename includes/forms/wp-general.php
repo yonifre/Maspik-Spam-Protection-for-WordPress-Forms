@@ -104,6 +104,30 @@ function maspik_comments_checker(array $data) {
     if ( $content !== '' ) {
         $comment_ai_fields['comment_content'] = $content;
     }
+
+    // Comment submission integrity: signal Matrix via plugin_spam_likelihood floor (5) when key
+    // hidden markers are missing from $_POST. Legitimate WP comment forms always submit:
+    //   - comment_post_ID  (hidden field, ID of the post being commented on)
+    //   - comment_parent   (hidden field, 0 for top-level or parent comment ID for replies)
+    //   - comment          (the comment body)
+    // A forged/direct POST that bypassed the rendered form usually omits at least one. Each
+    // failure mode forwards its own sentinel as the referrer value so the Matrix API can
+    // distinguish between them (see maspik_matrix_referrer_for_payload):
+    //   - `no_comment_post_id`  comment_post_ID missing/empty
+    //   - `no_comment_parent`   comment_parent not set in POST at all
+    //   - `no_comment_body`     comment field missing/empty
+    // Gated by NeedPageurl: only signal when the page-URL spam check is enabled in settings.
+    $comment_need_pageurl = efas_get_spam_api( 'NeedPageurl', 'bool' );
+    if ( $comment_need_pageurl && function_exists( 'maspik_matrix_raise_plugin_spam_likelihood_floor' ) ) {
+        $c_referrer = '';
+        if ( ! isset( $_POST['comment_post_ID'] ) || $_POST['comment_post_ID'] === '' ) {
+            $c_referrer = 'no_comment_post_id';
+        }
+        if ( $c_referrer !== '' ) {
+            maspik_matrix_raise_plugin_spam_likelihood_floor( 5, $c_referrer );
+        }
+    }
+
     // Country IP + honeypot use full $_POST; Matrix/AI uses whitelisted comment fields only.
     $GeneralCheck = GeneralCheck( $ip, $spam, $reason, $_POST, $comment_type, $comment_ai_fields );
     $spam = $GeneralCheck['spam'] ?? false;
@@ -171,22 +195,13 @@ add_filter('preprocess_comment', 'maspik_comments_checker');
 
 
 function add_custom_html_to_comment_form( $submit_button, $args ) {
-    if ( efas_get_spam_api('maspikHoneypot', 'bool') || efas_get_spam_api('maspikTimeCheck', 'bool') || maspik_get_settings('maspikYearCheck') ) {
+    if ( efas_get_spam_api('maspikHoneypot', 'bool') ) {
         $custom_html = "";
 
-        if (efas_get_spam_api('maspikHoneypot', 'bool')) {
             $custom_html .= '<div class="comment-form maspik-field" style="display: none;">
                 <label for="full-name-maspik-hp" class="comment-form-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
                 <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="full-name-maspik-hp" id="full-name-maspik-hp" class="comment-form-input" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '" data-form-type="other" data-lpignore="true">
             </div>';
-        }
-
-        if (maspik_get_settings('maspikYearCheck')) {
-            $custom_html .= '<div class="comment-form maspik-field" style="display: none;">
-                <label for="Maspik-currentYear" class="comment-form-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="comment-form-input" placeholder="" data-form-type="other" data-lpignore="true">
-            </div>';
-        }
 
         $submit_before = $custom_html;
         return $submit_before . $submit_button;
@@ -365,7 +380,20 @@ function maspik_register_form_honeypot_check_in_woocommerce_registration($errors
         if ( is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
             return $errors;
         }
-        
+
+        // SAFEGUARD: only run when the WC register form was actually submitted.
+        // The `woocommerce_registration_errors` filter is also fired by every call
+        // to wc_create_new_customer() (programmatic / plugin-driven account creation
+        // e.g. cart-page integrations, subscriptions, imports). In those contexts
+        // $_POST has no register form fields, so the spam-key/honeypot check would
+        // always fail and produce false positives in the spam log.
+        // `register` is the WC register form submit button name; `woocommerce-register-nonce`
+        // is the standard nonce field for that form. Either presence indicates a real submission.
+        $is_register_submit = isset( $_POST['register'] ) || isset( $_POST['woocommerce-register-nonce'] );
+        if ( ! $is_register_submit ) {
+            return $errors;
+        }
+
         // CRITICAL: Skip validation if this registration is happening during checkout
         // During checkout, $_POST contains billing fields (billing_first_name, billing_email, etc.)
         // If we detect billing fields, this is checkout account creation - skip registration validation

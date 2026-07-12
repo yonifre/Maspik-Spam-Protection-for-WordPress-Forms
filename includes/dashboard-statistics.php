@@ -485,7 +485,7 @@ function maspik_render_dashboard_widget() {
 
                     <?php if (count($type_totals) > 1): ?>
                     // Type Breakdown Chart
-                    const typeData = <?php echo json_encode($type_totals); ?>;
+                    const typeData = <?php echo maspik_safe_json_encode( $type_totals ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
                     new Chart(document.getElementById('maspikTypeChart'), {
                         type: 'doughnut',
                         data: {

@@ -66,7 +66,6 @@ $MASPIK_FIELD_DISPLAY_NAMES = [
     "ip_blacklist" => "IP",
     "maspikHoneypot" => "Honeypot",
     "maspikTimeCheck" => "Time Check",
-    "maspikYearCheck" => "Year Check",
     "emoji_check" => "Emoji Check",
     
          // AI spam check fields (Beta feature - will be Pro-only in future versions)
@@ -110,7 +109,8 @@ $MASPIK_PLUGIN_MAP = [
     'Wordpress Comments' => 'comments',
     'Custom PHP Forms' => 'custom',
     'MetForm' => 'metform',
-    'BitForm' => 'bitform'
+    'BitForm' => 'bitform',
+    'Divi' => 'divi',
 ];
 
 
@@ -138,6 +138,11 @@ $MASPIK_IMPORT_OPTIONS = [
     'MaxCharactersInTextAreaField',
     'contain_links',
     'custom_error_message_MaxCharactersInTextAreaField',
+
+    // Emoji (text + textarea)
+    'emoji_check',
+    'emoji_custom_message_toggle',
+    'custom_error_message_emoji_check',
     
     // Phone options
     'tel_formats',
@@ -147,6 +152,7 @@ $MASPIK_IMPORT_OPTIONS = [
     'phone_custom_message_toggle',
     'custom_error_message_tel_formats',
     'phone_limit_custom_message_toggle',
+    'custom_error_message_MaxCharactersInPhoneField',
     
     // Language options
     'lang_needed',
@@ -165,21 +171,57 @@ $MASPIK_IMPORT_OPTIONS = [
     // Other options
     'private_file_id',
     'popular_spam',
+    'maspikHoneypot',
+    'maspikTimeCheck',
     'NeedPageurl',
     'ip_blacklist',
     'error_message',
+    'maspik_Store_log',
+    'spam_log_limit',
+    'shere_data',
     
     // API options
     'abuseipdb_api',
     'abuseipdb_score',
     'proxycheck_io_api',
     'proxycheck_io_risk',
+    'numverify_api',
+    'numverify_country',
+
+    // Form support toggles (export includes all DB rows; keep import in sync)
+    'maspik_support_Elementor_forms',
+    'maspik_support_cf7',
+    'maspik_support_wp_comment',
+    'maspik_support_registration',
+    'maspik_support_custom_forms',
+    'maspik_support_woocommerce_review',
+    'maspik_support_Woocommerce_registration',
+    'maspik_support_woocommerce_orders',
+    'maspik_support_Wpforms',
+    'maspik_support_formidable_forms',
+    'maspik_support_forminator_forms',
+    'maspik_support_fluentforms_forms',
+    'maspik_support_gravity_forms',
+    'maspik_support_bricks_forms',
+    'maspik_support_metform_forms',
+    'maspik_support_bitform_forms',
+    'maspik_support_breakdance_forms',
+    'maspik_support_ninjaforms',
+    'maspik_support_jetforms',
+    'maspik_support_everestforms',
+    'maspik_support_buddypress_forms',
+    'maspik_support_helloplus_forms',
+    'maspik_support_divi_forms',
+
+    // WooCommerce orders spam settings
+    'maspik_woo_orders_error_message',
+    'maspik_woo_orders_gateways_to_check',
+    'maspik_woo_orders_check_zero_total',
     
     // AI spam check options (Beta feature - will be Pro-only in future versions)
     'maspik_ai_enabled',
     'maspik_ai_context',
     'maspik_matrix_api_mode',
-    'maspik_ai_client_secret',
 ];
 
 
@@ -220,6 +262,7 @@ $MASPIK_DEFAULT_SETTINGS = [
     'maspik_support_helloplus_forms' => 'yes',
     'maspik_support_metform_forms' => 'yes',
     'maspik_support_bitform_forms' => 'yes',
+    'maspik_support_divi_forms' => 'no',
     
     // AI spam check / Matrix: on by default for new installs; mode 2 = IP only (no form content to API — privacy-first)
     'maspik_ai_enabled' => '1',

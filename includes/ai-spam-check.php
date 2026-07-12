@@ -29,16 +29,219 @@ function maspik_matrix_api_mode_int(): int {
 }
 
 /**
+ * First non-empty referrer: integration global → POST → HTTP Referer.
+ *
+ * @return string Unslashed raw string or ''.
+ */
+function maspik_matrix_resolve_referrer_raw(): string {
+    $glob = isset( $GLOBALS['maspik_matrix_plugin_spam_likelihood_referrer'] ) ? $GLOBALS['maspik_matrix_plugin_spam_likelihood_referrer'] : null;
+    if ( is_string( $glob ) && $glob !== '' ) {
+        return $glob;
+    }
+    // phpcs:disable WordPress.Security.NonceVerification.Missing -- read-only; forwarded to Matrix only.
+    if ( isset( $_POST['referrer'] ) && is_string( $_POST['referrer'] ) && $_POST['referrer'] !== '' ) {
+        return wp_unslash( $_POST['referrer'] );
+    }
+    if ( ! empty( $_SERVER['HTTP_REFERER'] ) && is_string( $_SERVER['HTTP_REFERER'] ) ) {
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotValidated
+        return wp_unslash( $_SERVER['HTTP_REFERER'] );
+    }
+    // phpcs:enable WordPress.Security.NonceVerification.Missing
+
+    return '';
+}
+
+/**
+ * Value for Matrix `maspik_referrer`: valid URL, else sanitized text label, else sentinel `no_referrer`.
+ *
+ * Detection rule:
+ *   - Contains `://` → treated as URL → esc_url_raw() (may normalize/escape).
+ *   - Otherwise      → treated as a sentinel/label and passed through sanitize_text_field() only.
+ *     This avoids esc_url_raw() prepending `http://` and turning labels like `no_referrer` into
+ *     invented URLs like `http://no_referrer`.
+ *
+ * Sentinels currently set by integrations (forwarded as-is, server-side correlates each one):
+ *   - Elementor (elementor.php):           `no_referrer`           — $_POST['referrer'] missing + NeedPageurl on.
+ *   - Contact Form 7 (cf7.php):            `no_cf7_id`             — $_POST['_wpcf7'] missing + NeedPageurl on.
+ *   - Gravity Forms (gravityforms.php):    `no_gform_submit`       — $_POST['gform_submit'] empty/missing
+ *                                          `no_match_gform_submit` — gform_submit ≠ resolved form_id
+ *                                          `is_submit_invalid`     — is_submit_<id> missing/not '1'
+ *                                          `no_state_token`        — state_<id> missing/empty
+ *                                          `no_current_lead`       — GFFormsModel::get_current_lead() empty/non-array
+ *   - WP Comments (wp-general.php):        `no_comment_post_id`    — $_POST['comment_post_ID'] missing/empty
+ *                                          `no_comment_parent`     — $_POST['comment_parent'] not set
+ *                                          `no_comment_body`       — $_POST['comment'] missing/empty
+ *
+ * @param string $raw From maspik_matrix_resolve_referrer_raw().
+ * @return string
+ */
+function maspik_matrix_referrer_for_payload( string $raw ): string {
+    if ( $raw === '' ) {
+        return 'no_referrer';
+    }
+    if ( strpos( $raw, '://' ) === false ) {
+        $as_label = sanitize_text_field( $raw );
+        return ( $as_label !== '' ) ? $as_label : 'no_referrer';
+    }
+    $as_url = esc_url_raw( $raw );
+    if ( $as_url !== '' ) {
+        return $as_url;
+    }
+    $as_text = sanitize_text_field( $raw );
+
+    return ( $as_text !== '' ) ? $as_text : 'no_referrer';
+}
+
+/**
+ * Transient TTL (seconds) for the "monthly limit reached" cache after a server 429 response.
+ *
+ * The Matrix server is the source of truth for the monthly cap (HTTP 429 = limit reached).
+ * After the server returns 429, the plugin caches that signal locally for this duration to
+ * avoid hammering the API on every form submission until the cap resets / TTL expires.
+ *
+ * Filter: `maspik_matrix_limit_cache_ttl` — clamped to [60, 86400] seconds.
+ *
+ * @return int Seconds.
+ */
+function maspik_matrix_limit_cache_ttl(): int {
+    $default = 15 * 60; // 15 minutes
+    $ttl = (int) apply_filters( 'maspik_matrix_limit_cache_ttl', $default );
+    return max( 60, min( 86400, $ttl ) );
+}
+
+/**
+ * Whether the Matrix monthly limit was recently reported by the server (local cache).
+ *
+ * @return bool True only when the server-reported "limit reached" transient is active.
+ */
+function maspik_matrix_is_limit_reached_cached(): bool {
+    return (bool) get_transient( 'maspik_matrix_limit_reached' );
+}
+
+/**
+ * Mark the Matrix monthly limit as reached locally.
+ *
+ * TTL strategy:
+ *   - If the server reported a `reset_at` (UTC ISO 8601 in the 429 response), cache until that
+ *     instant — capped at 30 days as a safety belt against bad clocks. This avoids retrying the
+ *     server during the entire month after the cap is hit.
+ *   - Otherwise, cache for `maspik_matrix_limit_cache_ttl()` (default 15 min).
+ *
+ * Called from the 429 handler in maspik_ai_check_submission() AFTER quota info is saved, so the
+ * `reset_at` from the response is already available. Pro sites are exempt — the cache is never
+ * set for them, so a Free → Pro upgrade takes effect immediately.
+ */
+function maspik_matrix_set_limit_reached_cache(): void {
+    if ( function_exists( 'cfes_is_supporting' ) && cfes_is_supporting() ) {
+        return;
+    }
+    $ttl = maspik_matrix_limit_cache_ttl();
+    if ( function_exists( 'maspik_matrix_get_quota_reset_at_ts' ) ) {
+        $reset_ts = maspik_matrix_get_quota_reset_at_ts();
+        if ( $reset_ts > 0 ) {
+            $until_reset = $reset_ts - time();
+            if ( $until_reset > 0 ) {
+                $ttl = min( 30 * 86400, max( $ttl, $until_reset ) );
+            }
+        }
+    }
+    set_transient( 'maspik_matrix_limit_reached', 1, $ttl );
+}
+
+/**
+ * Clear the local "limit reached" cache. Useful for tests, admin tooling, manual reset, or
+ * when you want to force-recheck the server (e.g. after upgrading the plan).
+ */
+function maspik_matrix_clear_limit_reached_cache(): void {
+    delete_transient( 'maspik_matrix_limit_reached' );
+}
+
+/**
+ * Server-reported Matrix monthly quota info.
+ *
+ * Populated from Matrix API responses (200 + 429) when the site is on the free tier and the
+ * server counted the request at its gate. Pro/licensed sites do not receive these fields.
+ * Returns array with optional keys: `limit`, `used`, `remaining`, `reset_at` (ISO 8601 UTC),
+ * `updated_at` (UNIX timestamp of last refresh).
+ *
+ * @return array
+ */
+function maspik_matrix_get_server_quota_info(): array {
+    $info = get_option( 'maspik_matrix_server_quota', array() );
+    return is_array( $info ) ? $info : array();
+}
+
+/**
+ * Persist server-reported Matrix monthly quota info. Each parameter is merged only when not null
+ * so the option is updated incrementally (e.g. a 200 response brings `remaining`, a 429 brings
+ * `reset_at`). Always refreshes `updated_at`.
+ *
+ * @param int|null    $limit     monthly_limit from server.
+ * @param int|null    $used      monthly_used from server.
+ * @param int|null    $remaining monthly_remaining from server (200 only).
+ * @param string|null $reset_at  ISO 8601 reset timestamp from server (429).
+ */
+function maspik_matrix_save_server_quota_info( $limit = null, $used = null, $remaining = null, $reset_at = null ): void {
+    $current = maspik_matrix_get_server_quota_info();
+
+    if ( $limit !== null && is_numeric( $limit ) ) {
+        $current['limit'] = max( 0, (int) $limit );
+    }
+    if ( $used !== null && is_numeric( $used ) ) {
+        $current['used'] = max( 0, (int) $used );
+    }
+    if ( $remaining !== null && is_numeric( $remaining ) ) {
+        $current['remaining'] = max( 0, (int) $remaining );
+    }
+    if ( $reset_at !== null && is_string( $reset_at ) && $reset_at !== '' ) {
+        $current['reset_at'] = sanitize_text_field( $reset_at );
+    }
+    $current['updated_at'] = time();
+
+    update_option( 'maspik_matrix_server_quota', $current, false );
+}
+
+/**
+ * UNIX timestamp of the next quota reset reported by the server, or 0 when unknown / already past.
+ *
+ * @return int
+ */
+function maspik_matrix_get_quota_reset_at_ts(): int {
+    $info = maspik_matrix_get_server_quota_info();
+    if ( ! isset( $info['reset_at'] ) || ! is_string( $info['reset_at'] ) || $info['reset_at'] === '' ) {
+        return 0;
+    }
+    $ts = strtotime( $info['reset_at'] );
+    if ( ! $ts || $ts <= time() ) {
+        return 0;
+    }
+    return $ts;
+}
+
+/**
  * Check submission using AI-based spam detection
  * 
  * @param array $fields Array of form fields and their values
+ * @param string $form_type Form integration slug (e.g. elementor, cf7).
+ * @param int|null $plugin_spam_likelihood Optional 1–9; null = request floor (maspik_matrix_get_plugin_spam_likelihood_floor(), default 1).
  * @return array Array containing spam check results
  */
-function maspik_ai_check_submission( array $fields, string $form_type = '' ): array {
+function maspik_ai_check_submission( array $fields, string $form_type = '', $plugin_spam_likelihood = null ): array {
     $ai_metrics_sent = 0;
     $ai_metrics_spam = 0;
     // Wrap entire function in try-catch to prevent any exceptions from breaking the site
     try {
+        // Server is the source of truth for the monthly limit. We only short-circuit locally when
+        // the server has *recently* told us the limit is reached (HTTP 429 → local transient cache,
+        // see maspik_matrix_set_limit_reached_cache). Pro sites are exempt and bypass the cache.
+        $is_pro_plan = function_exists( 'cfes_is_supporting' ) && cfes_is_supporting();
+        if ( ! $is_pro_plan && maspik_matrix_is_limit_reached_cached() ) {
+            if ( function_exists( 'maspik_ai_metrics_record_limit_skip' ) ) {
+                maspik_ai_metrics_record_limit_skip( 1 );
+            }
+            return array( 'allow' => true, 'reason' => 'MASPIK Matrix paused: monthly limit reached (server-reported, cached)' );
+        }
+
         // Get AI settings from options/DB with fallbacks to constants
         $endpoint = defined('MASPIK_AI_ENDPOINT') ? MASPIK_AI_ENDPOINT : '';
 
@@ -68,15 +271,15 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
 
     // If AI is disabled or missing configuration, allow submission
     if ( empty($endpoint) ) {
-            return ['allow' => true, 'reason' => 'AI disabled: missing endpoint'];
+            return ['allow' => true, 'reason' => 'Matrix disabled: missing endpoint'];
     }
     
     if ( empty($license) ) {
-        return ['allow' => true, 'reason' => 'AI disabled: missing license key'];
+        return ['allow' => true, 'reason' => 'Matrix disabled: missing license key'];
     }
     
     if ( empty($token) ) {
-        return ['allow' => true, 'reason' => 'AI disabled: missing site token'];
+        return ['allow' => true, 'reason' => 'Matrix disabled: missing site token'];
     }
 
     // Build request payload with safe fallbacks
@@ -96,6 +299,14 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
 
     $matrix_mode = maspik_matrix_api_mode_int();
 
+    if ( $plugin_spam_likelihood === null && function_exists( 'maspik_matrix_get_plugin_spam_likelihood_floor' ) ) {
+        $plugin_spam_likelihood = maspik_matrix_get_plugin_spam_likelihood_floor();
+    }
+    if ( $plugin_spam_likelihood === null ) {
+        $plugin_spam_likelihood = 1;
+    }
+    $plugin_spam_likelihood = max( 1, min( 9, (int) $plugin_spam_likelihood ) );
+
     // Mode 2: IP reputation only — do not send form field contents (no text analysis on server).
     $context_block = [
         'business_info' => $context, // max 170 characters
@@ -105,11 +316,16 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
         'site_languages' => $site_languages, // V2 array of all languages in the site
         'form_type' => $form_type,
         'mode'      => $matrix_mode,
+        // 1 = low suspicion, 9 = high; integrations raise floor — filter: maspik_matrix_plugin_spam_likelihood_1_9.
+        'plugin_spam_likelihood' => $plugin_spam_likelihood,
     ];
 
     $payload = [ 'context' => $context_block ];
     if ( $matrix_mode !== 2 ) {
         $payload['fields'] = $fields;
+    }
+    if ( efas_get_spam_api( 'NeedPageurl', 'bool' ) ) {
+        $payload['maspik_referrer'] = maspik_matrix_referrer_for_payload( maspik_matrix_resolve_referrer_raw() );
     }
     
     // JSON string (not array!) - important for Lambda to receive proper structure
@@ -126,7 +342,8 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
         'Content-Type'      => 'application/json',
         'Accept'            => 'application/json',
         'User-Agent'        => 'Maspik-Plugin/' . ( defined( 'MASPIK_VERSION' ) ? MASPIK_VERSION : '2.0' ) . '; ' . home_url( '', 'https' ),
-        'X-Maspik-Token'    => $token, // send token so Lambda can validate & cache on first request
+        'X-maspik-tkn'    => $token, // send token so Lambda can validate & cache on first request
+        'X-Maspik-Is-Pro'   => cfes_is_supporting() ? '1' : '0',
         'Maspik-client_ip'  => $client_ip, // send client ip to validate against the IP blacklist
         'X-Maspik-Mode'     => (string) $matrix_mode,
     ];
@@ -152,25 +369,27 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
     $timeout = (int) apply_filters( 'maspik_ai_request_timeout', 7 );
     $timeout = max( 3, min( 30, $timeout ) ); // clamp 3–30 seconds
 
+    //print request headers and body
+    //error_log('Maspik AI: Request headers: ' . json_encode($headers));
+    //error_log('Maspik AI: Request body: ' . $request_body);
     $resp = wp_remote_post( $endpoint, [
         'timeout'     => $timeout,
         'headers'     => $headers,
         'body'        => $request_body,     // keep as string, not array
         'sslverify'   => (bool) apply_filters( 'maspik_ai_ssl_verify', true ),
     ]);
-
     // Handle request errors gracefully
     if ( is_wp_error($resp) ) {
         // On failure, don't block - allow submission and log error
         $error_msg = $resp->get_error_message();
         if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-            error_log( 'Maspik AI: HTTP error - ' . $error_msg );
+            error_log( 'Maspik Matrix: HTTP error - ' . $error_msg );
         }
-        return ['allow' => true, 'reason' => 'AI unavailable: ' . $error_msg];
+        return ['allow' => true, 'reason' => 'Matrix unavailable: ' . $error_msg];
     }
 
     $code = wp_remote_retrieve_response_code($resp);
-    $response_body = wp_remote_retrieve_body($resp);
+    $response_body = wp_remote_retrieve_body($resp );
     
     // Ensure code is valid integer
     if (!is_numeric($code)) {
@@ -190,7 +409,7 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
         $json = json_decode( $response_body, true );
         if ( json_last_error() !== JSON_ERROR_NONE ) {
             if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-                error_log('Maspik AI: JSON decode failed - ' . json_last_error_msg());
+                error_log('Maspik Matrix: JSON decode failed - ' . json_last_error_msg());
             }
             $json = null; // Ensure json is null on error
         }
@@ -205,16 +424,30 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
          *   "spam_score": 0-100|null,
          *   "reasons": ["..."],
          *   "model": "sms-spam-classifier",
+         *   "monthly_limit": 200,        // optional, free tier with active quota
+         *   "monthly_used": 75,          // optional
+         *   "monthly_remaining": 125,    // optional
          *   ...
          * }
          *
          * - `is_spam` is the single source of truth for block/allow.
          * - `spam_score` is used only for UI / logs (optional).
+         * - `monthly_*` are mirrored locally so the UI shows the server-reported numbers.
          */
+
+        // Mirror server-reported monthly quota info (free tier only — Pro responses omit these).
+        if ( isset( $json['monthly_limit'] ) || isset( $json['monthly_used'] ) || isset( $json['monthly_remaining'] ) ) {
+            maspik_matrix_save_server_quota_info(
+                $json['monthly_limit']     ?? null,
+                $json['monthly_used']      ?? null,
+                $json['monthly_remaining'] ?? null,
+                null
+            );
+        }
 
         // Require at least is_spam or spam_score to make a decision
         if ( ! isset( $json['is_spam'] ) && ! isset( $json['spam_score'] ) ) {
-            return ['allow' => true, 'reason' => 'AI response invalid: missing is_spam / spam_score'];
+            return ['allow' => true, 'reason' => 'Matrix response invalid: missing is_spam / spam_score'];
         }
 
         // Score is optional – use it only if it's valid, otherwise null
@@ -271,7 +504,7 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
             try {
                 maspik_save_ai_log($fields, $json, $result);
             } catch ( Exception $e ) {
-                error_log('Maspik AI: Failed to save log: ' . $e->getMessage());
+                error_log('Maspik Matrix: Failed to save log: ' . $e->getMessage());
             }
         }
         
@@ -315,10 +548,34 @@ function maspik_ai_check_submission( array $fields, string $form_type = '' ): ar
     }
     
     if ( $code === 429 ) {
-        $error_result = ['allow' => true, 'reason' => 'AI: rate limit exceeded'];
-        
+        // Server reports the monthly limit is reached. Expected JSON shape:
+        //   { "error": "monthly_limit_reached", "monthly_limit": 200, "monthly_used": 200,
+        //     "reset_at": "2026-06-01T00:00:00.000Z" }
+        // Mirror those values locally FIRST so the smart TTL inside maspik_matrix_set_limit_reached_cache()
+        // can read `reset_at` and cache until that instant (instead of falling back to 15 min).
+        if ( is_array( $json ) ) {
+            maspik_matrix_save_server_quota_info(
+                $json['monthly_limit'] ?? null,
+                $json['monthly_used']  ?? null,
+                null,
+                $json['reset_at']      ?? null
+            );
+        }
+        if ( function_exists( 'maspik_matrix_set_limit_reached_cache' ) ) {
+            maspik_matrix_set_limit_reached_cache();
+        }
+
+        // This attempt did not result in a real spam check — don't count it toward the local
+        // "checks sent" counter. Record it as a limit skip instead so metrics stay accurate.
+        $ai_metrics_sent = 0;
+        if ( function_exists( 'maspik_ai_metrics_record_limit_skip' ) ) {
+            maspik_ai_metrics_record_limit_skip( 1 );
+        }
+
+        $error_result = ['allow' => true, 'reason' => 'Matrix: monthly limit reached (server 429)'];
+
         // Save 429 error log
-        $error_response = ['error' => true, 'http_code' => 429, 'error_detail' => 'Rate limit exceeded', 'response_body' => $response_body];
+        $error_response = ['error' => true, 'http_code' => 429, 'error_detail' => 'Monthly limit reached', 'response_body' => $response_body];
         if ( is_array($fields) && is_array($error_response) && is_array($error_result) ) {
             try {
                 maspik_save_ai_log($fields, $error_response, $error_result);

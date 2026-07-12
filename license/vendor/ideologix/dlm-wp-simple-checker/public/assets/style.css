@@ -145,7 +145,6 @@ body.expired {
 .dlm_license_links .deactivate,
 .dlm_license_links .cancel,
 .dlm_license_button input.dlm_btn__prim {
-    font-family:'Montserrat', 'Open Sans', sans-serif;
     font-weight: 400;
     text-transform: Uppercase;
     font-size:14px;
@@ -283,4 +282,165 @@ fieldset.dlm_switcher_control label {
 }
 .rtl div.dlm_license_form_head, .rtl #dlm_license_branding, .rtl #dlm_license_actions{
     flex-flow: row-reverse;
+}
+
+.dlm-license-faq {
+    padding: 18px 20px;
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: 0 6px 22px rgba(38, 50, 56, 0.08);
+}
+
+.dlm-license-faq-wrap {
+    margin-top: 16px;
+}
+
+.dlm-license-faq h3 {
+    margin: 0 0 14px;
+    font-size: 20px;
+    line-height: 1.4;
+    text-align: start;
+}
+
+.dlm-license-faq-item {
+    background: #f8f8f8;
+    border: 1px solid #e4e4e4;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.dlm-license-faq-item summary {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: start;
+    list-style: none;
+}
+
+.dlm-license-faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.dlm-license-faq-item summary::before {
+    content: "\f348";
+    display: inline-block;
+    font-family: dashicons;
+    font-size: 16px;
+    color: #2271b1;
+    line-height: 1;
+    flex: 0 0 auto;
+}
+
+.dlm-license-faq-item summary::after {
+    content: "\f347";
+    display: inline-block;
+    font-family: dashicons;
+    font-size: 16px;
+    color: #6b7280;
+    line-height: 1;
+    margin-inline-start: auto;
+    transition: transform 0.2s ease-in-out;
+}
+
+.dlm-license-faq-item[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.dlm-license-faq-item p {
+    margin: 10px 0 0;
+    color: #444;
+    line-height: 1.6;
+    text-align: start;
+}
+
+.dlm-license-faq-item p a {
+    color: var(--primary-color);
+    text-decoration: underline !important;
+}
+
+.dlm-license-faq-item p a:hover {
+    color: #d86f12;
+}
+
+.rtl .dlm-license-faq-item summary {
+    flex-direction: row-reverse;
+}
+
+.rtl .dlm-license-faq-item summary::after {
+    margin-inline-start: 0;
+    margin-inline-end: auto;
+}
+
+.dlm-inline-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
+
+.dlm-inline-alert p {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.dlm-inline-alert__icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+}
+
+.dlm-inline-alert--error {
+    background: #fff3f1;
+    border-color: #f0c6bf;
+    color: #7a2316;
+}
+
+.dlm-inline-alert--success {
+    background: #edf8ef;
+    border-color: #b7ddbe;
+    color: #1d5b2a;
+}
+
+.dlm-license-debug {
+    margin: 12px 0 16px;
+    padding: 10px 12px;
+    background: #f6f7f7;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dlm-license-debug summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.dlm-license-debug__hint {
+    margin: 8px 0 6px;
+    color: #50575e;
+    line-height: 1.5;
+}
+
+.dlm-license-debug__pre {
+    margin: 0;
+    padding: 10px;
+    max-height: 320px;
+    overflow: auto;
+    background: #1d2327;
+    color: #f0f0f1;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
 }

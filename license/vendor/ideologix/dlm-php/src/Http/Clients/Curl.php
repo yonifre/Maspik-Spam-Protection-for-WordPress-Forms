@@ -324,8 +324,21 @@ class Curl extends Base {
 			return ( new Result( $success, $data ) );
 		} else {
 			$code    = isset( $result['code'] ) ? $result['code'] : 'server_error';
-			$message = isset( $result['message'] ) ? $result['message'] : 'Unknown error.';
-			$data    = isset( $result['data'] ) ? $result['data'] : array();
+			$message = isset( $result['message'] ) ? $result['message'] : '';
+			$data    = isset( $result['data'] ) ? (array) $result['data'] : array();
+
+			// WordPress REST often returns code/message only inside "data" (or nested envelope).
+			if ( is_array( $data ) ) {
+				if ( isset( $data['code'] ) ) {
+					$code = $data['code'];
+				}
+				if ( isset( $data['message'] ) && '' !== trim( (string) $data['message'] ) ) {
+					$message = $data['message'];
+				}
+			}
+			if ( '' === trim( (string) $message ) ) {
+				$message = 'Unknown error.';
+			}
 
 			return new Error( $code, $message, $data );
 		}

@@ -127,13 +127,5 @@ function maspik_add_honeypot_to_bp_registration_form() {
         </div>';
     }
 
-    if ( maspik_get_settings( 'maspikYearCheck' ) ) {
-        echo '<div class="register-section maspik-field" style="display: none;">
-            <label for="Maspik-currentYear" class="bp-form-control-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-            <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="buddypress-form-control" placeholder="">
-        </div>';
-    }
-
-
 }
 add_action('bp_before_registration_submit_buttons', 'maspik_add_honeypot_to_bp_registration_form', 9999);

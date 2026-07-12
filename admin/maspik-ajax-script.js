@@ -7,7 +7,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
         // Your AJAX logic goes here
         var formData = new FormData(this);
-        formData.append('action', 'maspik_handle_playground_form'); // Add action to formData
+        formData.append('action', 'maspik_handle_playground_form');
+        if (typeof ajax_object.playground_nonce !== 'undefined') {
+            formData.append('nonce', ajax_object.playground_nonce);
+        }
 
         fetch(ajax_object.ajax_url, {
             method: "POST",
@@ -15,6 +18,10 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(response => response.json())
         .then(data => {
+            if (!data || typeof data.status === 'undefined') {
+                document.getElementById("statusMessage").innerHTML = "<p class='errorMessage'>Request failed. Please reload the page and try again.</p>";
+                return;
+            }
             // Update status message
             document.getElementById("statusMessage").innerHTML = "<p class='" + data.status + "Message'>" + data.message + "</p>";
 

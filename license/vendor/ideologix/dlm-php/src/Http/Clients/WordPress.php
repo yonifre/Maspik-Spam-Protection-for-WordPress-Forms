@@ -183,10 +183,34 @@ class WordPress extends Base {
 			return new Error( 500, $response->get_error_message(), [] );
 		}
 
-		$body   = wp_remote_retrieve_body( $response );
-		$result = json_decode( $body, true );
+		$body = wp_remote_retrieve_body( $response );
 
-		return $this->prepare_result($result);
+		$headers_raw = wp_remote_retrieve_headers( $response );
+		$headers_arr = array();
+		if ( is_object( $headers_raw ) && method_exists( $headers_raw, 'getAll' ) ) {
+			$headers_arr = $headers_raw->getAll();
+		} elseif ( is_array( $headers_raw ) ) {
+			$headers_arr = $headers_raw;
+		}
+
+		$http_debug = array(
+			'http_status'       => wp_remote_retrieve_response_code( $response ),
+			'response_body_raw' => $body,
+			'response_headers'  => $headers_arr,
+		);
+
+		$result = json_decode( $body, true );
+		if ( ! is_array( $result ) ) {
+			$http_debug['json_error'] = function_exists( 'json_last_error_msg' ) ? json_last_error_msg() : '';
+
+			return new Error(
+				'invalid_json',
+				'Response was not valid JSON.',
+				$http_debug
+			);
+		}
+
+		return $this->prepare_result( $result, $http_debug );
 	}
 
 	/**
@@ -196,19 +220,40 @@ class WordPress extends Base {
 	 *
 	 * @return Error|Result
 	 */
-	private function prepare_result($result) {
+	private function prepare_result( $result, array $http_debug = array() ) {
 		if ( isset( $result['success'] ) ) {
 			$success = (bool) $result['success'];;
 			$data = array();
 			if ( isset( $result['data'] ) ) {
 				$data = (array) $result['data'];
 			}
+			if ( ! empty( $http_debug ) ) {
+				$data['_dlm_http_raw'] = $http_debug;
+			}
 
 			return ( new Result( $success, $data ) );
 		} else {
 			$code    = isset( $result['code'] ) ? $result['code'] : 'server_error';
-			$message = isset( $result['message'] ) ? $result['message'] : 'Unknown error.';
-			$data    = isset( $result['data'] ) ? $result['data'] : array();
+			$message = isset( $result['message'] ) ? $result['message'] : '';
+			// Same shape as REST logs: { "data": { "code", "message", "data": {...} }, "status": 405, "headers": {} }
+			$data    = isset( $result['data'] ) ? (array) $result['data'] : array();
+
+			// WordPress REST often returns code/message only inside "data" (or nested envelope).
+			if ( is_array( $data ) ) {
+				if ( isset( $data['code'] ) ) {
+					$code = $data['code'];
+				}
+				if ( isset( $data['message'] ) && '' !== trim( (string) $data['message'] ) ) {
+					$message = $data['message'];
+				}
+			}
+			if ( '' === trim( (string) $message ) ) {
+				$message = 'Unknown error.';
+			}
+
+			if ( ! empty( $http_debug ) ) {
+				$data['_dlm_http_raw'] = $http_debug;
+			}
 
 			return new Error( $code, $message, $data );
 		}

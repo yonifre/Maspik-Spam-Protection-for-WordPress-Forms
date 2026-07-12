@@ -185,12 +185,12 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th class="check-column"><input type="checkbox" id="select-all-ips"></th>
-                    <th><?php esc_html_e('IP Address', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Country', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Last Attempt', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col" class="check-column"><input type="checkbox" id="select-all-ips" aria-label="<?php esc_attr_e( 'Select all IP addresses', 'contact-forms-anti-spam' ); ?>"></th>
+                    <th scope="col"><?php esc_html_e('IP Address', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Country', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Last Attempt', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -223,11 +223,11 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th class="check-column"><input type="checkbox" id="select-all-domains"></th>
-                    <th><?php esc_html_e('Domain', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col" class="check-column"><input type="checkbox" id="select-all-domains" aria-label="<?php esc_attr_e( 'Select all domains', 'contact-forms-anti-spam' ); ?>"></th>
+                    <th scope="col"><?php esc_html_e('Domain', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -282,18 +282,18 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th class="check-column">
+                    <th scope="col" class="check-column">
                         <?php if (cfes_is_supporting("country_location") && maspik_get_settings('AllowedOrBlockCountries') == 'block'): ?>
-                            <input type="checkbox" id="select-all-countries">
+                            <input type="checkbox" id="select-all-countries" aria-label="<?php esc_attr_e( 'Select all countries', 'contact-forms-anti-spam' ); ?>">
                         <?php else: ?>
-                            <input type="checkbox" id="select-all-countries" disabled>
+                            <input type="checkbox" id="select-all-countries" aria-label="<?php esc_attr_e( 'Select all countries', 'contact-forms-anti-spam' ); ?>" disabled>
                         <?php endif; ?>
                     </th>
-                    <th><?php esc_html_e('Country', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Last Attempt', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Country', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Last Attempt', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -326,7 +326,7 @@
                     <td><?php echo esc_html($country->last_attempt); ?></td>
                     <td>
                         <?php if (cfes_is_supporting("country_location")): ?>
-                            <?php if (1 || maspik_get_settings('AllowedOrBlockCountries') == 'block'): ?>
+                            <?php if (maspik_get_settings('AllowedOrBlockCountries') == 'block'): ?>
                                 <button class="button button-small block-country" data-country="<?php echo esc_attr($country_code); ?>">
                                     <?php esc_html_e('Block', 'contact-forms-anti-spam'); ?>
                                 </button>
@@ -355,11 +355,11 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('Page URL', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Title', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Page URL', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Title', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Spam Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Actions', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -392,9 +392,9 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('Spam Type', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Spam Type', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -417,9 +417,9 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('Spam Reason', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Spam Reason', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -440,9 +440,9 @@
         <table class="wp-list-table widefat fixed striped maspik-table">
             <thead>
                 <tr>
-                    <th><?php esc_html_e('User Agent', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
-                    <th><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('User Agent', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Count', 'contact-forms-anti-spam'); ?></th>
+                    <th scope="col"><?php esc_html_e('Percentage', 'contact-forms-anti-spam'); ?></th>
                 </tr>
             </thead>
             <tbody>

@@ -110,6 +110,7 @@ class Maspik {
 	// if elementor pro active
         if ( maspik_is_plugin_active( 'elementor-pro/elementor-pro.php' ) ) {
           require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/elementor.php';
+          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/elementor-atomic-forms.php';
         }
       }
     // if cf7 active
@@ -194,6 +195,13 @@ class Maspik {
       if( maspik_get_settings( "maspik_support_bitform_forms" ) != "no" ){ 
         if ( maspik_is_plugin_active( 'bit-form/bitforms.php' ) ) {
           require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/bitform.php';
+        }
+      }
+
+	  // Divi Contact Form module (theme or Divi Builder plugin)
+      if ( maspik_get_settings( 'maspik_support_divi_forms' ) != 'no' ) {
+        if ( function_exists( 'maspik_is_divi_active' ) && maspik_is_divi_active() ) {
+          require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/forms/divi.php';
         }
       }
 

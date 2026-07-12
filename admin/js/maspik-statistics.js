@@ -1,6 +1,61 @@
 jQuery(document).ready(function($) {
     'use strict';
 
+    // ── Toast notification helper ─────────────────────────────────────────
+    if (!$('#maspik-toast-wrap').length) {
+        $('body').append('<div id="maspik-toast-wrap" class="maspik-toast-wrap"></div>');
+    }
+    function maspikToast(message, type) {
+        type = type || 'success';
+        var icons = { success: 'yes-alt', error: 'dismiss', warning: 'warning', info: 'info' };
+        var $t = $('<div class="maspik-toast maspik-toast--' + type + '">' +
+            '<span class="dashicons dashicons-' + (icons[type] || 'info') + '"></span>' +
+            '<span>' + message + '</span></div>');
+        $('#maspik-toast-wrap').append($t);
+        setTimeout(function () { $t.addClass('maspik-toast--visible'); }, 10);
+        setTimeout(function () {
+            $t.removeClass('maspik-toast--visible');
+            setTimeout(function () { $t.remove(); }, 300);
+        }, 4000);
+    }
+
+    // ── Confirm modal helper (replaces native confirm() dialogs) ──────────
+    if (!$('#maspik-confirm-modal').length) {
+        $('body').append(
+            '<div id="maspik-confirm-modal">' +
+              '<div class="maspik-confirm-box">' +
+                '<span class="dashicons maspik-confirm-icon"></span>' +
+                '<p id="maspik-confirm-msg"></p>' +
+                '<div class="maspik-confirm-actions">' +
+                  '<button class="maspik-confirm-btn maspik-confirm-btn--ok" id="maspik-confirm-ok">Confirm</button>' +
+                  '<button class="maspik-confirm-btn maspik-confirm-btn--cancel" id="maspik-confirm-cancel">Cancel</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>'
+        );
+        $(document).on('click', '#maspik-confirm-modal', function (e) {
+            if (e.target === this) { $(this).removeClass('is-open'); }
+        });
+        $(document).on('click', '#maspik-confirm-cancel', function () {
+            $('#maspik-confirm-modal').removeClass('is-open');
+        });
+    }
+    function maspikConfirm(message, onOk, opts) {
+        opts = opts || {};
+        $('#maspik-confirm-msg').text(message);
+        var $icon = $('#maspik-confirm-modal .maspik-confirm-icon');
+        $icon.attr('class', 'dashicons maspik-confirm-icon ' +
+            (opts.danger ? 'dashicons-trash maspik-confirm-icon--danger' : 'dashicons-warning maspik-confirm-icon--warn'));
+        var $ok = $('#maspik-confirm-ok');
+        $ok.attr('class', 'maspik-confirm-btn ' + (opts.danger ? 'maspik-confirm-btn--ok-danger' : 'maspik-confirm-btn--ok'));
+        $ok.text(opts.okLabel || 'Confirm');
+        $('#maspik-confirm-modal').addClass('is-open');
+        $ok.off('click.maspikConfirm').on('click.maspikConfirm', function () {
+            $('#maspik-confirm-modal').removeClass('is-open');
+            if (typeof onOk === 'function') { onOk(); }
+        });
+    }
+
     // Handle custom date range selector
     $('.nav-tab-wrapper .nav-tab').on('click', function(e) {
         if ($(this).data('range') === 'custom') {
@@ -168,66 +223,43 @@ jQuery(document).ready(function($) {
                 try {
                     
                     const mapData = [['Country', 'Spam Count', {role: 'tooltip', p:{html:true}}]];
+                    // Deduplicated country → ISO-3166-1-alpha-2 map.
                     const countryCodeMap = {
-                        'Unknown': 'XX',
-                        'United States': 'US',
+                        'Unknown':        'XX',
+                        'United States':  'US',
                         'United Kingdom': 'GB',
-                        'Israel': 'IL',
-                        'Russia': 'RU',
-                        'China': 'CN',
-                        'India': 'IN',
-                        'Brazil': 'BR',
-                        'Germany': 'DE',
-                        'France': 'FR',
-                        'Japan': 'JP',
-                        'Canada': 'CA',
-                        'Australia': 'AU',
-                        'South Korea': 'KR',
-                        'Italy': 'IT',
-                        'Spain': 'ES',
-                        'Mexico': 'MX',
-                        'Indonesia': 'ID',
-                        'Turkey': 'TR',
-                        'Netherlands': 'NL',
-                        'Saudi Arabia': 'SA',
-                        'Switzerland': 'CH',
-                        'South Africa': 'ZA',
-                        'Ukraine': 'UA',
-                        'Poland': 'PL',
-                        'Sweden': 'SE',
-                        'Belgium': 'BE',
-                        'Argentina': 'AR',
-                        'Thailand': 'TH',
-                        'Egypt': 'EG',
-                        'Pakistan': 'PK',
-                        'Vietnam': 'VN',
-                        'Turkey': 'TR',
-                        'Iran': 'IR',
-                        'Iraq': 'IQ',
-                        'Israel': 'IL',
-                        'Japan': 'JP',
-                        'Korea': 'KR',
-                        'China': 'CN',
-                        'India': 'IN',
-                        'Brazil': 'BR',
-                        'Mexico': 'MX',
-                        'Indonesia': 'ID',
-                        'Turkey': 'TR',
-                        'Netherlands': 'NL',
-                        'Saudi Arabia': 'SA',
-                        'Switzerland': 'CH',
-                        'South Africa': 'ZA',
-                        'Ukraine': 'UA',
-                        'Poland': 'PL',
-                        'Sweden': 'SE',
-                        'Belgium': 'BE',
-                        'Argentina': 'AR',
-                        'Thailand': 'TH',
-                        'Egypt': 'EG',
-                        'Pakistan': 'PK',
-                        'Vietnam': 'VN',
-                        'Turkey': 'TR',
-                        'Iran': 'IR',
+                        'Russia':         'RU',
+                        'Germany':        'DE',
+                        'France':         'FR',
+                        'Canada':         'CA',
+                        'Australia':      'AU',
+                        'South Korea':    'KR',
+                        'Korea':          'KR',
+                        'Italy':          'IT',
+                        'Spain':          'ES',
+                        'Israel':         'IL',
+                        'China':          'CN',
+                        'India':          'IN',
+                        'Brazil':         'BR',
+                        'Japan':          'JP',
+                        'Mexico':         'MX',
+                        'Indonesia':      'ID',
+                        'Turkey':         'TR',
+                        'Netherlands':    'NL',
+                        'Saudi Arabia':   'SA',
+                        'Switzerland':    'CH',
+                        'South Africa':   'ZA',
+                        'Ukraine':        'UA',
+                        'Poland':         'PL',
+                        'Sweden':         'SE',
+                        'Belgium':        'BE',
+                        'Argentina':      'AR',
+                        'Thailand':       'TH',
+                        'Egypt':          'EG',
+                        'Pakistan':       'PK',
+                        'Vietnam':        'VN',
+                        'Iran':           'IR',
+                        'Iraq':           'IQ',
                     };
                     
                     let totalSpam = 0;
@@ -323,30 +355,22 @@ jQuery(document).ready(function($) {
     // Handle Block IP functionality
     $('.block-ip').on('click', function() {
         const ip = $(this).data('ip');
-        if (confirm(`Are you sure you want to block IP ${ip}?`)) {
-            // Send AJAX request to block the IP
+        maspikConfirm('Block IP address ' + ip + '?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_ip',
-                    nonce: maspikStats.nonce,
-                    ip: ip
-                },
+                data: { action: 'maspik_block_ip', nonce: maspikStats.nonce, ip: ip },
                 success: function(response) {
                     if (response.success) {
-                        alert('IP blocked successfully!');
-                        // Reload the page to show updated data
-                        location.reload();
+                        maspikToast('IP ' + ip + ' blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        alert('Failed to block IP: ' + (response.data ? response.data.message : 'Unknown error'));
+                        maspikToast('Failed to block IP: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block IP' });
     });
 
     // Handle Block Selected IPs
@@ -356,34 +380,26 @@ jQuery(document).ready(function($) {
         }).get();
 
         if (selectedIps.length === 0) {
-            alert('Please select at least one IP to block.');
+            maspikToast('Please select at least one IP to block.', 'warning');
             return;
         }
 
-        if (confirm(`Are you sure you want to block ${selectedIps.length} selected IPs?`)) {
-            // Send AJAX request to block multiple IPs
+        maspikConfirm('Block ' + selectedIps.length + ' selected IP address' + (selectedIps.length > 1 ? 'es' : '') + '?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_multiple_ips',
-                    nonce: maspikStats.nonce,
-                    ips: selectedIps
-                },
+                data: { action: 'maspik_block_multiple_ips', nonce: maspikStats.nonce, ips: selectedIps },
                 success: function(response) {
                     if (response.success) {
-                        alert(`${response.data.count} IPs blocked successfully!`);
-                        // Reload the page to show updated data
-                        location.reload();
+                        maspikToast(response.data.count + ' IPs blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        alert('Failed to block IPs: ' + (response.data ? response.data.message : 'Unknown error'));
+                        maspikToast('Failed to block IPs: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block IPs' });
     });
 
     // Handle Select All IPs checkbox
@@ -394,39 +410,30 @@ jQuery(document).ready(function($) {
     // Handle Block Country functionality
     $('.block-country').on('click', function() {
         const country = $(this).data('country');
-        if (confirm(`Are you sure you want to block the country "${country}"?`)) {
+        maspikConfirm('Block country "' + country + '"?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_country',
-                    nonce: maspikStats.nonce,
-                    country: country
-                },
+                data: { action: 'maspik_block_country', nonce: maspikStats.nonce, country: country },
                 success: function(response) {
                     if (response.success) {
-                        alert('Country blocked successfully!');
-                        location.reload();
+                        maspikToast('Country "' + country + '" blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        // Check if failure is due to incorrect AllowedOrBlockCountries mode
                         if (response.data && response.data.wrong_mode) {
-                            if (confirm(response.data.message + '\n\nWould you like to go to settings page?')) {
+                            maspikConfirm(response.data.message + ' Go to Settings?', function () {
                                 window.location.href = response.data.settings_url;
-                            }
-                        } 
-                        // Check if failure is due to non-pro user
-                        else if (response.data && response.data.is_pro === false) {
+                            }, { okLabel: 'Go to Settings' });
+                        } else if (response.data && response.data.is_pro === false) {
                             showProFeatureModal('country_blocking');
                         } else {
-                            alert('Failed to block country: ' + (response.data ? response.data.message : 'Unknown error'));
+                            maspikToast('Failed to block country: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                         }
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block Country' });
     });
 
     // Function to convert country name to country code
@@ -578,50 +585,38 @@ jQuery(document).ready(function($) {
     $('#block-selected-countries').on('click', function() {
         const selectedCountries = $('input[name="selected_countries[]"]:checked').map(function() {
             const countryName = $(this).val();
-            const countryCode = getCountryCode(countryName);
-            return countryCode || countryName; // Use country code if available, otherwise use country name
+            return getCountryCode(countryName) || countryName;
         }).get();
 
         if (selectedCountries.length === 0) {
-            alert('Please select at least one country to block.');
+            maspikToast('Please select at least one country to block.', 'warning');
             return;
         }
 
-        if (confirm(`Are you sure you want to block ${selectedCountries.length} selected countries?`)) {
-            // Send AJAX request to block multiple countries
+        maspikConfirm('Block ' + selectedCountries.length + ' selected countr' + (selectedCountries.length > 1 ? 'ies' : 'y') + '?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_multiple_countries',
-                    nonce: maspikStats.nonce,
-                    countries: selectedCountries
-                },
+                data: { action: 'maspik_block_multiple_countries', nonce: maspikStats.nonce, countries: selectedCountries },
                 success: function(response) {
                     if (response.success) {
-                        alert(`${response.data.count} countries blocked successfully!`);
-                        // Reload the page to show updated data
-                        location.reload();
+                        maspikToast(response.data.count + ' countries blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        // Check if the reason for failure is an incorrect AllowedOrBlockCountries mode
                         if (response.data && response.data.wrong_mode) {
-                            if (confirm(response.data.message + '\n\nDo you want to go to settings page?')) {
+                            maspikConfirm(response.data.message + ' Go to Settings?', function () {
                                 window.location.href = response.data.settings_url;
-                            }
-                        } 
-                        // Check if the reason for failure is that the user is not a Pro user
-                        else if (response.data && response.data.is_pro === false) {
+                            }, { okLabel: 'Go to Settings' });
+                        } else if (response.data && response.data.is_pro === false) {
                             showProFeatureModal('country_blocking');
                         } else {
-                            alert('Failed to block countries: ' + (response.data ? response.data.message : 'Unknown error'));
+                            maspikToast('Failed to block countries: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                         }
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block Countries' });
     });
 
     // Handle Select All Countries checkbox
@@ -632,30 +627,22 @@ jQuery(document).ready(function($) {
     // Handle Block Domain functionality
     $('.block-domain').on('click', function() {
         const domain = $(this).data('domain');
-        if (confirm(`Are you sure you want to block all emails from domain "@${domain}"?`)) {
-            // Send AJAX request to block the domain
+        maspikConfirm('Block all emails from "@' + domain + '"?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_domain',
-                    nonce: maspikStats.nonce,
-                    domain: domain
-                },
+                data: { action: 'maspik_block_domain', nonce: maspikStats.nonce, domain: domain },
                 success: function(response) {
                     if (response.success) {
-                        alert('Email domain blocked successfully!');
-                        // Reload the page to show updated data
-                        location.reload();
+                        maspikToast('@' + domain + ' blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        alert('Failed to block domain: ' + (response.data ? response.data.message : 'Unknown error'));
+                        maspikToast('Failed to block domain: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block Domain' });
     });
 
     // Handle Block Selected Domains
@@ -665,34 +652,26 @@ jQuery(document).ready(function($) {
         }).get();
 
         if (selectedDomains.length === 0) {
-            alert('Please select at least one domain to block.');
+            maspikToast('Please select at least one domain to block.', 'warning');
             return;
         }
 
-        if (confirm(`Are you sure you want to block all emails from ${selectedDomains.length} selected domains?`)) {
-            // Send AJAX request to block multiple domains
+        maspikConfirm('Block all emails from ' + selectedDomains.length + ' selected domain' + (selectedDomains.length > 1 ? 's' : '') + '?', function () {
             $.ajax({
                 url: ajaxurl,
                 type: 'POST',
-                data: {
-                    action: 'maspik_block_multiple_domains',
-                    nonce: maspikStats.nonce,
-                    domains: selectedDomains
-                },
+                data: { action: 'maspik_block_multiple_domains', nonce: maspikStats.nonce, domains: selectedDomains },
                 success: function(response) {
                     if (response.success) {
-                        alert(`${response.data.count} email domains blocked successfully!`);
-                        // Reload the page to show updated data
-                        location.reload();
+                        maspikToast(response.data.count + ' domains blocked successfully.', 'success');
+                        setTimeout(function () { location.reload(); }, 1200);
                     } else {
-                        alert('Failed to block domains: ' + (response.data ? response.data.message : 'Unknown error'));
+                        maspikToast('Failed to block domains: ' + (response.data ? response.data.message : 'Unknown error'), 'error');
                     }
                 },
-                error: function() {
-                    alert('An error occurred while processing your request.');
-                }
+                error: function() { maspikToast('Server error. Please try again.', 'error'); }
             });
-        }
+        }, { danger: true, okLabel: 'Block Domains' });
     });
 
     // Handle Select All Domains checkbox

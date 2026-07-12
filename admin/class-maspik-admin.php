@@ -9,9 +9,6 @@ if ( ! defined( 'WPINC' ) ) {
  *
  */
 
-    define('MASPIK_API_KEY', 'KVJS5BDFFYabnZkQ3Svty6z6CIsxp3YG5ny4lrFQ');
-
-
     // run the default values function only once if necessary
     function maspik_check_if_need_to_run_once() {
         // check if already run
@@ -93,7 +90,7 @@ if ( ! defined( 'WPINC' ) ) {
         function maspik_activate_license(){    
 
             echo "<div class='maspik-small-btn btns get-pro activate-license'>
-                <a class='maspik-get-pro-a' href='". get_site_url() ."/wp-admin/admin.php?page=maspik_activator' target='self'><span class='dashicons dashicons-admin-network'></span> Activate License</a> </div>";
+                <a class='maspik-get-pro-a' href='" . esc_url( admin_url( 'admin.php?page=maspik_activator' ) ) . "' target='self'><span class='dashicons dashicons-admin-network'></span> Activate License</a> </div>";
         }
 
 
@@ -480,15 +477,16 @@ class Maspik_Admin {
         $base64 = base64_encode($svg);
         $icon_url = 'data:image/svg+xml;base64,' . $base64;
 
-        add_menu_page($this->plugin_name, 'Maspik Spam', 'administrator', $this->plugin_name, array($this, 'displayPluginAdminDashboard'), $icon_url, 85);
+        // Parent uses edit_pages so Editors see the menu; submenus gate settings vs log.
+        add_menu_page($this->plugin_name, 'Maspik Spam', 'edit_pages', $this->plugin_name, array($this, 'displayPluginAdminDashboard'), $icon_url, 85);
 
         $numlogspam = maspik_spam_count() ? "(" . maspik_spam_count() . ")" : false;
 
-        add_submenu_page($this->plugin_name, 'Main settings', 'Main settings', 'administrator', $this->plugin_name, array($this, 'displayPluginAdminDashboard'), 10);
+        add_submenu_page($this->plugin_name, 'Main settings', 'Main settings', 'manage_options', $this->plugin_name, array($this, 'displayPluginAdminDashboard'), 10);
 
         add_submenu_page($this->plugin_name, 'Spam Log', 'Spam Log ' . $numlogspam, 'edit_pages', $this->plugin_name . '-log.php', array($this, 'displayPluginAdminSettings'), 20);
         
-        add_submenu_page($this->plugin_name, 'Import/Export', 'Import/Export', 'administrator', $this->plugin_name . '-import-export.php', array($this, 'Maspik_import_export_settings_page'), 40);
+        add_submenu_page($this->plugin_name, 'Import/Export', 'Import/Export', 'manage_options', $this->plugin_name . '-import-export.php', array($this, 'Maspik_import_export_settings_page'), 40);
 
         if ( cfes_is_supporting()) {
             $first_maspik_api_id = maspik_get_settings('private_file_id');
@@ -513,15 +511,19 @@ class Maspik_Admin {
     }
 
     public function displayPluginAdminDashboard() {
+        if ( ! maspik_user_can_manage_settings() ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=maspik-log.php' ) );
+            exit;
+        }
         require_once 'partials/' . $this->plugin_name . '-admin-display.php';
     }
 
     public function displayPluginAdminSettings() {
-        $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
-        if (isset($_GET['error_message'])) {
-            add_action('admin_notices', array($this, 'settingsPageSettingsMessages'));
-            do_action('admin_notices', $_GET['error_message']);
+        if ( ! maspik_user_can_view_spam_log() ) {
+            wp_die( __( 'You do not have sufficient permissions to access this page.', 'contact-forms-anti-spam' ) );
         }
+        $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
+        $this->maybe_render_settings_error_notice();
         require_once 'partials/' . $this->plugin_name . '-log.php';
     }
 
@@ -529,57 +531,55 @@ class Maspik_Admin {
 
     public function displayPluginAdminPro() {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
-        if (isset($_GET['error_message'])) {
-            add_action('admin_notices', array($this, 'settingsPageSettingsMessages'));
-            do_action('admin_notices', $_GET['error_message']);
-        }
+        $this->maybe_render_settings_error_notice();
         require_once 'partials/' . $this->plugin_name . '-api.php';
     }
 
     public function displayPluginAdminOptions() {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
-        if (isset($_GET['error_message'])) {
-            add_action('admin_notices', array($this, 'settingsPageSettingsMessages'));
-            do_action('admin_notices', $_GET['error_message']);
-        }
+        $this->maybe_render_settings_error_notice();
         require_once 'partials/' . $this->plugin_name . '-options.php';
     }
 
     public function Maspik_import_export_settings_page() {
         $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'general';
-        if (isset($_GET['error_message'])) {
-            add_action('admin_notices', array($this, 'settingsPageSettingsMessages'));
-            do_action('admin_notices', $_GET['error_message']);
-        }
+        $this->maybe_render_settings_error_notice();
         require_once 'partials/' . $this->plugin_name . '-import-export.php';
     }
 
-
-    public function settingsPageSettingsMessages($error_message) {
-        switch ($error_message) {
-            case '1':
-                $message = __('There was an error adding this setting. Please try again. If this persists, shoot us an email.', 'contact-forms-anti-spam');
-                $err_code = esc_attr('Error');
-                $setting_field = 'Error';
-                break;
+    /**
+     * Show a sanitized admin notice when ?error_message= is present (avoid passing raw GET to hooks).
+     */
+    private function maybe_render_settings_error_notice() {
+        if ( ! isset( $_GET['error_message'] ) ) {
+            return;
         }
-        $type = 'error';
-        add_settings_error($setting_field, $err_code, $message, $type);
+
+        $error_code = sanitize_text_field( wp_unslash( $_GET['error_message'] ) );
+        if ( '1' !== $error_code ) {
+            return;
+        }
+
+        echo '<div class="notice notice-error is-dismissible"><p>';
+        esc_html_e( 'There was an error adding this setting. Please try again. If this persists, shoot us an email.', 'contact-forms-anti-spam' );
+        echo '</p></div>';
     }
          
     /**
      * Handle feedback form submission
      */
     public function maspik_handle_feedback_submission() {
-        // Enable error logging
-        if (!defined('WP_DEBUG_LOG')) {
-            define('WP_DEBUG_LOG', true);
-        }
-        
         // Verify nonce
         if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'maspik_feedback_nonce')) {
             wp_send_json_error('Invalid nonce');
             return;
+        }
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error(
+                array( 'message' => __( 'Unauthorized', 'contact-forms-anti-spam' ) ),
+                403
+            );
         }
 
         // Get and sanitize form data
@@ -612,12 +612,8 @@ class Maspik_Admin {
         
         // Use the site's own domain for sending
         $from_email = 'noreply@' . $domain;
-        if (!is_email($from_email)) {
-            // If the domain is not valid, use a fallback
-            $from_email = 'noreply@' . $_SERVER['HTTP_HOST'];
-            if (!is_email($from_email)) {
-                $from_email = 'noreply@wpmaspik.com';
-            }
+        if ( ! is_email( $from_email ) ) {
+            $from_email = 'noreply@wpmaspik.com';
         }
         $from_name = $site_name ? $site_name : 'WordPress';
         
@@ -634,22 +630,6 @@ class Maspik_Admin {
         );
 
         $to = 'hello@wpmaspik.com';
-        
-        // Debug information
-        $debug_info = array(
-            'to' => $to,
-            'from_email' => $from_email,
-            'from_name' => $from_name,
-            'subject' => $subject,
-            'message' => $message,
-            'headers' => $headers,
-            'site_url' => $site_url,
-            'php_version' => PHP_VERSION,
-            'wordpress_version' => get_bloginfo('version'),
-            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
-            'mail_function_exists' => function_exists('mail'),
-            'wp_mail_function_exists' => function_exists('wp_mail')
-        );
 
         // Try to send email with error handling
         $sent = false;
@@ -672,17 +652,15 @@ class Maspik_Admin {
             $error_message = $e->getMessage();
         }
         
-        if ($sent) {
-            wp_send_json_success(array(
-                'message' => 'Feedback sent successfully',
-                'debug_info' => $debug_info
-            ));
-        } else {
-            wp_send_json_error(array(
-                'message' => 'Failed to send feedback: ' . $error_message,
-                'debug_info' => $debug_info
-            ));
+        if ( $sent ) {
+            wp_send_json_success(
+                array( 'message' => __( 'Feedback sent successfully', 'contact-forms-anti-spam' ) )
+            );
         }
+
+        wp_send_json_error(
+            array( 'message' => __( 'Failed to send feedback. Please try again later.', 'contact-forms-anti-spam' ) )
+        );
     }
 
         // AI logs clearing is handled in includes/functions.php

@@ -1,5 +1,89 @@
 # Changelog #
 
+The WordPress.org-facing changelog is in `README.txt` under **== Changelog ==**. This file mirrors the same release notes for the repository.
+
+## 2.9.1 - 22/06/2026 ##
+* Bug fix - Divi Contact Forms: phone fields were wrongly logged and blocked as spam (e.g. "Empty formats" or "Wildcard pattern match") even when the phone number passed validation. Valid phone submissions now go through correctly.
+
+## 2.9.0 - 25/05/2026 ##
+* Security – Comprehensive security hardening across the plugin.
+* New feature – Spam log now supports column filtering and sorting with server-side pagination, making it easy to find specific entries even with thousands of records.
+* New feature – Support for Divi Contact Forms! Enable Divi support from the bottom of the Settings page.
+* Announcement – Maspik Matrix is now Inputgate – a standalone, cloud-based spam-blocking product built natively into Maspik. Inputgate analyses every form submission in real time using cloud intelligence, adding a powerful extra layer of protection on top of Maspik's local rules.
+
+## 2.8.1 - 10/05/2026 ##
+* Improvement - License activation form UI/UX improved.
+* Improvement - Import and export options now work properly for all settings.
+* Improvement - WooCommerce registration spam check works better when registration happens during checkout.
+* Improvement - Improved Maspik Matrix usage UI/UX.
+* Improvement - Improved detection and blocking of Direct POST attacks.
+
+## 2.8.0 - 15/04/2026 ##
+* Enhanced - Maspik Matrix is free for all users: 100 free checks per month; Pro users get unlimited checks.
+* Note - Local checks are not counted toward the monthly limit; only API calls are counted.
+* New feature - Direct POST attack detection.
+* New feature - Elementor Atomic Forms validation support.
+* New feature - WooCommerce orders spam check (Pro).
+* New feature - Usage statistics for Maspik Matrix.
+* Improvement - Compatibility with WordPress 7.0.
+* Improvement - Maspik Matrix performance.
+
+## 2.7.3 - 16/03/2026 ##
+* Improvement - Gravity Forms integration.
+* Improvement - WordPress comments integration.
+* Improvement - BuddyPress integration.
+* Improvement - Maspik Matrix modes: IP only, IP + banned words, Full Matrix check (configurable in settings).
+
+## 2.7.2 - 11/03/2026 ##
+* Improvement - Country detection when using Cloudflare proxy IPs.
+* Improvement - Maspik Matrix performance and accuracy.
+* Added - Usage statistics for Maspik Matrix.
+
+## 2.7.1 - 01/03/2026 ##
+* Improvement - Maspik Matrix receives only visible content fields (text, name, email, phone, textarea); hidden fields, checkboxes, selects, and other non-textual fields are excluded from the AI check.
+* Improvement - Maspik Matrix not active by default for better privacy.
+* Improvement - Accessibility: aria-label and placeholder for honeypot fields.
+* Fixed - Admin footer not displaying correctly in some cases.
+
+## 2.7.0 - 18/02/2026 ##
+* Added - WooCommerce orders spam check (Pro): validate checkout submissions before order processing.
+* Added - Maspik Matrix enabled by default (can be disabled in settings).
+* Enhanced - Client IP detection security: trusts forwarded headers only from known proxies (Cloudflare, Sucuri).
+* Enhanced - Code performance optimizations.
+
+## 2.6.2 - 11/02/2026 ##
+* Improvement - Maspik Matrix enabled by default for new installs; existing sites see an opt-in notice.
+
+## 2.6.1 - 04/02/2026 ##
+* Change - Unified text and textarea blacklist into one "Forbidden keywords" field, with migration of existing settings.
+* Improvement - Dashboard integration UI: compact chips, better status indicators, masked API keys from Maspik Dashboard.
+* Improvement - Maspik Matrix performance and accuracy.
+
+## 2.6.0 - 17/12/2025 ##
+* New feature - Maspik Matrix (multi-layer spam protection: IP reputation, patterns, heuristics, scoring).
+* Add support for URL field from Maspik dashboard settings.
+
+## 2.5.10 - 02/12/2025 ##
+* Improvement - Compatibility with WordPress 6.9.
+* Improvement - AI spam check performance.
+* Improvement - Text blacklist handling for non-ASCII characters.
+
+## 2.5.9 - 28/10/2025 ##
+* New feature - AI spam check (Beta), enable from Maspik settings.
+* Fixed - Spam statistics dashboard PHP error when no spam was blocked in some cases.
+
+## 2.5.8 - 10/09/2025 ##
+* Fixed - Country detection API failing to identify visitor locations in some cases.
+
+## 2.5.7 - 08/09/2025 ##
+* Fixed - Security: spam log entries could be deleted by non-admin users (thanks @Dmitrii).
+* Fixed - Metform phone fields not checked correctly.
+
+## 2.5.6 - 26/08/2025 ##
+* New feature - Bitforms support.
+* New feature - Metform support.
+* Improvement - AI spam check accuracy.
+
 ## 2.5.5 - 20/08/2025 ##
 * New (Beta) feature - AI spam check - Give it a try!
 * For Developers - Add hooks to disable spam check for specific forms link: [Developers Hooks](https://wpmaspik.com/documentation/developers/?readme-file)

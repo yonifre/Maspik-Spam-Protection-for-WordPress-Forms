@@ -126,27 +126,17 @@ function validate_jet_form_for_spam($form_handler) {
 }
 
 
-///////
 add_filter('jet-form-builder/before-render-field', 'add_maspikhp_html_to_jet_form', 10, 3);
 
 function add_maspikhp_html_to_jet_form($content, $field_name, $attrs) {
-    if ($field_name === 'submit-field') {
+    if ($field_name === 'submit-field' && efas_get_spam_api('maspikHoneypot', 'bool')) {
         $addhtml = "";
 
-        if (efas_get_spam_api('maspikHoneypot', 'bool')) {
-            $honeypot_name = maspik_HP_name();
-            $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
-                <label for="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="' . esc_attr( $honeypot_name ) . '" id="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__field jet-form-builder__field-text" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
-            </div>';
-        }
-
-        if (maspik_get_settings('maspikYearCheck')) {
-            $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
-                <label for="Maspik-currentYear" class="jet-form-builder__label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="jet-form-builder__field jet-form-builder__field-text" placeholder="">
-            </div>';
-        }
+        $honeypot_name = maspik_HP_name();
+        $addhtml .= '<div class="jet-form-builder__field-wrap maspik-field">
+            <label for="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
+            <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="' . esc_attr( $honeypot_name ) . '" id="' . esc_attr( $honeypot_name ) . '" class="jet-form-builder__field jet-form-builder__field-text" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
+        </div>';
 
         return $addhtml . $content;
     }

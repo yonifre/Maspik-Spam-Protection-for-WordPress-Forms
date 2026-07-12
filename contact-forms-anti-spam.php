@@ -4,7 +4,7 @@
  * Plugin Name:       Maspik - Ultimate Spam Protection
  * Plugin URI:        https://wpmaspik.com/
  * Description:       The best spam protection plugin. Block spam using advanced filters, AI, blacklists, and IP verification and honeypot fields...
- * Version:           2.7.3
+ * Version:           2.9.1
  * Author:            WpMaspik
  * Author URI:        https://wpmaspik.com/?readme
  * Text Domain:       contact-forms-anti-spam
@@ -32,7 +32,7 @@ if (!defined('ABSPATH')) exit;
 /**
  * Currently plugin version.
  */
-define( 'MASPIK_VERSION', '2.7.3' );
+define( 'MASPIK_VERSION', '2.9.1' );
 define('MASPIK_PLUGIN_FILE', __FILE__);
 
 /**
@@ -239,7 +239,7 @@ function maspik_deactivation_survey() {
         <h3><?php esc_html_e('Quick Feedback', 'contact-forms-anti-spam'); ?></h3>
         <h4><?php esc_html_e('Moment of your time means meaningful improvement for everyone', 'contact-forms-anti-spam'); ?></h4>
         <form method="post" id="maspik-deactivation-form">
-            <input type="hidden" name="nonce" value="<?php echo $nonce; ?>">
+            <input type="hidden" name="nonce" value="<?php echo esc_attr( $nonce ); ?>">
             
             <div class="maspik-survey-options">
                 <label>

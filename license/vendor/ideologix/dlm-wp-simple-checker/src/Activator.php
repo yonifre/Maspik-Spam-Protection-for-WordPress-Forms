@@ -116,8 +116,10 @@ class Activator extends AbstractActivator {
 	 */
 	public function adminNotices() {
 
-		if ( ! $this->configuration->isActivationPage() ) {
-			//return;
+		// Activation page flashes are rendered inline in the page template.
+		// This avoids relying on WordPress admin notices that may be hidden.
+		if ( $this->configuration->isActivationPage() ) {
+			return;
 		}
 
 		$result = $this->getFlashedMessage( true );
@@ -140,6 +142,10 @@ class Activator extends AbstractActivator {
 		$configuration = $this->configuration;
 		try {
 			$license = new License( $configuration );
+			$flashMessage = get_transient( $configuration->prefix . 'flash' );
+			if ( ! empty( $flashMessage ) ) {
+				delete_transient( $configuration->prefix . 'flash' );
+			}
 			include( $configuration->public_path . 'views/page.php' );
 		} catch ( \Exception $e ) {
 			echo '<h1>Error.</h1>';
@@ -185,6 +191,7 @@ class Activator extends AbstractActivator {
 					} else {
 						$resposne   = $license->activate( $licenseKey );
 						if ( is_wp_error( $resposne ) ) {
+							$this->flash_wp_error( $resposne );
 							$this->redirectBack( 'error' );
 						} else {
 							$this->flashMessage( [ 'code' => 'success', 'message' => __( 'The license has been activated successfully' ) ] );
@@ -217,6 +224,7 @@ class Activator extends AbstractActivator {
 				$licenseKey = sanitize_text_field( $_POST['license_key'] );
 				$response   = $license->activate( $licenseKey );
 				if ( is_wp_error( $response ) ) {
+					$this->flash_wp_error( $response );
 					$this->redirectBack( 'error' );
 				} else {
 					// Check if the response contains the user_first_api_post_id
@@ -237,7 +245,11 @@ class Activator extends AbstractActivator {
 				$this->flashMessage( [ 'code' => 'error', 'message' => __( 'The license key is missing.' ) ] );
 				$this->redirectBack( 'error' );
 			} else {
-				$license->activate( $licenseKey );
+				$reactivate_result = $license->activate( $licenseKey );
+				if ( is_wp_error( $reactivate_result ) ) {
+					$this->flash_wp_error( $reactivate_result );
+					$this->redirectBack( 'error' );
+				}
 				$this->flashMessage( [ 'code' => 'success', 'message' => __( 'The license has been reactivated successfully' ) ] );
 				$this->redirectBack( 'success' );
 			}
@@ -292,6 +304,104 @@ class Activator extends AbstractActivator {
 		}
 
 		return $message;
+	}
+
+	/**
+	 * Store activation API error for inline display on the license page.
+	 *
+	 * @param \WP_Error $error
+	 *
+	 * @return void
+	 */
+	protected function flash_wp_error( \WP_Error $error ) {
+		$message = $error->get_error_message();
+		$data    = $error->get_error_data();
+		$code    = $error->get_error_code();
+
+		if ( is_array( $data ) ) {
+			if ( isset( $data['message'] ) && is_string( $data['message'] ) && '' !== trim( $data['message'] ) ) {
+				$message = $data['message'];
+			}
+			if ( isset( $data['data']['message'] ) && is_string( $data['data']['message'] ) && '' !== trim( $data['data']['message'] ) ) {
+				$message = $data['data']['message'];
+			}
+		}
+
+		$is_unclear = '' === trim( (string) $message ) || 'Unknown error.' === $message;
+
+		if ( in_array( $code, array( 'server_error', 'invalid_json', 'http_error' ), true ) ) {
+			$is_unclear = true;
+		}
+
+		if ( is_string( $message ) ) {
+			$technical_fragments = array(
+				'Response was not valid JSON',
+				'cURL error',
+				'HTTP request failed',
+			);
+			foreach ( $technical_fragments as $fragment ) {
+				if ( false !== stripos( $message, $fragment ) ) {
+					$is_unclear = true;
+					break;
+				}
+			}
+		}
+
+		if ( $is_unclear ) {
+			$message = __( 'License key not found. It may be expired.', 'contact-forms-anti-spam' );
+		}
+
+		$payload = [
+			'code'    => 'error',
+			'message' => $message,
+		];
+
+		if ( current_user_can( 'manage_options' ) ) {
+			$payload['debug'] = $this->build_license_error_debug( $error );
+		}
+
+		$this->flashMessage( $payload );
+	}
+
+	/**
+	 * Full WP_Error dump for admin debugging (which line to show to users).
+	 *
+	 * @param \WP_Error $error
+	 *
+	 * @return array
+	 */
+	protected function build_license_error_debug( \WP_Error $error ) {
+		$by_code   = array();
+		$http_flat = null;
+		foreach ( $error->get_error_codes() as $code ) {
+			$data = $error->get_error_data( $code );
+			$by_code[ $code ] = array(
+				'message' => $error->get_error_message( $code ),
+				'data'    => $data,
+			);
+			if ( null !== $http_flat || ! is_array( $data ) ) {
+				continue;
+			}
+			if ( isset( $data['_dlm_http_raw'] ) ) {
+				$http_flat = $data['_dlm_http_raw'];
+				continue;
+			}
+			// invalid_json path: WordPress client merges raw fields directly into Error data (no _dlm_http_raw).
+			if ( isset( $data['response_body_raw'] ) ) {
+				$http_flat = array(
+					'http_status'        => isset( $data['http_status'] ) ? $data['http_status'] : null,
+					'response_body_raw'  => $data['response_body_raw'],
+					'response_headers'   => isset( $data['response_headers'] ) ? $data['response_headers'] : array(),
+					'json_decode_error'  => isset( $data['json_error'] ) ? $data['json_error'] : null,
+				);
+			}
+		}
+
+		return array(
+			'server_http_raw'  => $http_flat,
+			'wp_error_by_code' => $by_code,
+			'hint'             => 'If server_http_raw shows HTML (nginx/405) while your server log shows JSON, the site HTTP stack (proxy/WAF/URL length) is returning an error page to the plugin before WordPress REST runs. Fix routing or use an origin URL for the API.',
+		);
 	}
 
 }

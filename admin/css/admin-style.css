@@ -1,3 +1,14 @@
+/* ── Design tokens ──────────────────────────────────────────────────────── */
+:root {
+  --maspik-orange:       #F48722;
+  --maspik-orange-dark:  #e06f0f;
+  --maspik-orange-light: #fff8f2;
+  --maspik-red:          #dc3545;
+  --maspik-red-dark:     #c82333;
+  --maspik-radius:       8px;
+  --maspik-radius-lg:    16px;
+}
+
 tr.hide {
   display: none;
 }
@@ -2016,6 +2027,210 @@ body.rtl .maspik-toggle-and-chip {
   min-height: 40px;
 }
 
+/* Shared dim layer for example / shortcode / Pro / What’s New popups */
+#popup-background {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 998;
+}
+
+/* Pro upgrade modal — Matrix / What’s New style surfaces */
+.maspik-popup-wrap.maspik-pro-upgrade-popup {
+  width: calc(100% - 32px);
+  max-width: 440px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.maspik-popup-wrap.maspik-pro-upgrade-popup.active {
+  border: none;
+  box-shadow: none;
+}
+
+.maspik-pro-upgrade-popup__panel {
+  position: relative;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #dcdcde;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(244, 135, 34, 0.06);
+}
+
+.maspik-pro-upgrade-popup__hero {
+  padding: 28px 28px 20px;
+  padding-inline-end: 52px;
+  background: linear-gradient(135deg, #fafbfc 0%, #fff9f4 100%);
+  border-bottom: 1px solid #ececec;
+}
+
+.maspik-pro-upgrade-popup__badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(135deg, #f48722 0%, #d96f12 100%);
+  padding: 4px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.maspik-pro-upgrade-popup__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: #1d2327;
+}
+
+.maspik-pro-upgrade-popup__lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #646970;
+}
+
+.maspik-pro-upgrade-popup__body {
+  padding: 20px 28px 8px;
+}
+
+.maspik-pro-upgrade-popup__features-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.maspik-pro-upgrade-popup__features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.maspik-pro-upgrade-popup__features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px;
+  background: #f6f7f7;
+  border-radius: 8px;
+  border: 1px solid #f0f0f1;
+}
+
+.maspik-pro-upgrade-popup__feature-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+  color: #2c8560;
+  margin-top: 1px;
+}
+
+.maspik-pro-upgrade-popup__feature-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #2c3338;
+}
+
+.maspik-pro-upgrade-popup__footer {
+  padding: 20px 28px 24px;
+  border-top: 1px solid #ececec;
+  text-align: center;
+}
+
+.maspik-pro-upgrade-popup__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #fff !important;
+  text-decoration: none !important;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f48722 0%, #d96f12 100%);
+  border: none;
+  box-shadow: 0 2px 8px rgba(244, 135, 34, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.maspik-pro-upgrade-popup__cta:hover,
+.maspik-pro-upgrade-popup__cta:focus {
+  color: #fff !important;
+  filter: brightness(1.05);
+  box-shadow: 0 4px 14px rgba(244, 135, 34, 0.45);
+  transform: translateY(-1px);
+}
+
+.maspik-pro-upgrade-popup__tagline {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #787c82;
+}
+
+.maspik-popup-wrap.maspik-pro-upgrade-popup .maspik-pro-upgrade-popup__close {
+  float: none;
+  font-size: inherit;
+  line-height: 1;
+}
+
+.maspik-pro-upgrade-popup__close {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  color: #646970;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+  z-index: 2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.maspik-pro-upgrade-popup__close:hover,
+.maspik-pro-upgrade-popup__close:focus {
+  color: #1d2327;
+  background: #fff;
+}
+
+.maspik-pro-upgrade-popup__close .dashicons {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+body.rtl .maspik-pro-upgrade-popup__close {
+  right: auto;
+  left: 14px;
+}
+
 .maspik-popup-wrap .data-array-wrap {
   background-color: #F6F6F6;
   border-radius: 10px;
@@ -2470,6 +2685,593 @@ body.rtl .maspik-toggle-and-chip {
   color: #646970;
 }
 
+/* Usage card follows the Matrix checkbox without save/reload; keep visible when dashboard/auto chip is shown. */
+.maspik-ai-toggle-wrap.togglewrap:not(:has(#maspik_ai_enabled:checked)):not(:has(.maspik-dashboard-on-chip)) .maspik-matrix-usage-card {
+  display: none !important;
+}
+
+.maspik-matrix-usage-card.maspik-security-summary {
+  margin-top: 14px;
+  max-width: 420px;
+  padding: 16px 18px 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: linear-gradient(165deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.maspik-security-summary--pro {
+  background: linear-gradient(152deg, #fdf8f6 0%, #faf0eb 52%, #fceee8 100%);
+  border-color: rgba(196, 83, 43, 0.35);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+}
+
+.maspik-matrix-usage-card.maspik-security-summary.is-limit-reached {
+  border-color: #fecaca;
+  background: #fffafa;
+  box-shadow: 0 1px 2px rgba(185, 28, 28, 0.06);
+}
+
+.maspik-security-summary__title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.maspik-security-summary__status {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #166534;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.maspik-security-summary__status.is-paused {
+  color: #b42318;
+}
+
+.maspik-security-summary__status.is-quota-warn {
+  color: #b45309;
+}
+
+.maspik-security-summary__status.is-quota-critical {
+  color: #b42318;
+}
+
+.maspik-security-summary--pro .maspik-security-summary__status {
+  color: #024921;
+}
+
+.maspik-security-summary__status-shield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: #16a34a;
+  filter: drop-shadow(0 0 5px rgba(22, 163, 74, 0.35));
+}
+
+.maspik-security-summary__status-shield .dashicons {
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.maspik-security-summary__status-shield--warn {
+  color: #d97706;
+  filter: drop-shadow(0 0 5px rgba(217, 119, 6, 0.3));
+}
+
+.maspik-security-summary__status-shield--critical {
+  color: #dc2626;
+  filter: drop-shadow(0 0 5px rgba(220, 38, 38, 0.28));
+}
+
+.maspik-security-summary--pro .maspik-security-summary__status-shield {
+  color: #c4532b;
+  filter: drop-shadow(0 0 6px rgba(196, 83, 43, 0.35));
+}
+
+.maspik-security-summary__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  box-shadow:
+    0 0 0 2px rgba(239, 68, 68, 0.2),
+    0 0 8px rgba(239, 68, 68, 0.45);
+}
+
+.maspik-security-summary__activity {
+  margin: 0 0 13px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.maspik-security-summary__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 14px;
+  margin: 0 0 14px;
+}
+
+.maspik-security-summary__metric {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e8ecf4;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.maspik-security-summary__metric-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.maspik-security-summary__metric-label {
+  display: block;
+  margin-top: 3px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.maspik-security-summary__network-brand {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #c4532b;
+}
+
+.maspik-security-summary__quota-note {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b42318;
+}
+
+.maspik-security-summary__reset.maspik-matrix-usage-reset {
+  margin: 0 0 10px;
+}
+
+.maspik-security-summary__unlimited-pill {
+  margin: 2px 0 6px;
+}
+
+.maspik-security-summary__unlimited-pill-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  padding: 11px 18px 11px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #024921;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(252, 238, 232, 0.88) 40%, rgba(250, 223, 212, 0.75) 100%);
+  border: 1px solid rgba(196, 83, 43, 0.22);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    0 6px 20px -10px rgba(196, 83, 43, 0.35);
+}
+
+.maspik-security-summary__unlimited-pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(196, 83, 43, 0.12);
+  color: #c4532b;
+}
+
+.maspik-security-summary__unlimited-pill-icon .dashicons {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.maspik-security-summary__unlimited-pill-text {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.maspik-security-summary__unlimited-infinity {
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0.88;
+  line-height: 1;
+}
+
+.maspik-matrix-usage-progress.maspik-security-summary__progress {
+  margin-top: 0;
+  height: 5px;
+  background: rgba(226, 232, 240, 0.65);
+  border-radius: 999px;
+}
+
+.maspik-matrix-usage-progress.maspik-security-summary__progress .maspik-matrix-usage-progress-fill {
+  transition:
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.maspik-matrix-usage-progress.maspik-security-summary__progress .maspik-matrix-usage-progress-fill.tone-success {
+  background: linear-gradient(90deg, #86efac 0%, #4ade80 100%);
+  box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.12) inset;
+}
+
+.maspik-matrix-usage-progress.maspik-security-summary__progress .maspik-matrix-usage-progress-fill.tone-warning {
+  background: linear-gradient(90deg, #fcd34d 0%, #fbbf24 100%);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.15) inset;
+}
+
+.maspik-matrix-usage-progress.maspik-security-summary__progress .maspik-matrix-usage-progress-fill.tone-danger {
+  background: linear-gradient(90deg, #fca5a5 0%, #f87171 100%);
+  box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.18) inset;
+}
+
+.maspik-security-summary__progress-label {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.maspik-security-summary__footer {
+  margin: 13px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid #e8ecf0;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+}
+
+.maspik-security-summary--pro .maspik-security-summary__footer {
+  border-top-color: rgba(196, 83, 43, 0.12);
+  color: rgba(154, 61, 33, 0.55);
+}
+
+.maspik-matrix-usage-upgrade.maspik-security-summary__upgrade + .maspik-security-summary__footer {
+  margin-top: 10px;
+}
+
+.maspik-matrix-usage-upgrade.maspik-security-summary__upgrade {
+  margin-top: 10px;
+  padding-top: 0;
+  gap: 8px 12px;
+}
+
+.maspik-security-summary__upgrade-hint {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: #64748b !important;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.maspik-security-summary__upgrade .maspik-btn-self.maspik-security-summary__upgrade-btn {
+  font-size: 12px;
+  padding: 6px 14px;
+  line-height: 1.4;
+}
+
+.maspik-matrix-usage-limit-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #b42318;
+  font-weight: 600;
+}
+
+.maspik-matrix-usage-reset {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.maspik-matrix-usage-summary,
+.maspik-matrix-usage-status,
+.maspik-matrix-usage-value,
+.maspik-matrix-usage-upgrade-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.maspik-matrix-usage-summary {
+  color: #1d2327;
+}
+
+.maspik-matrix-usage-progress {
+  margin-top: 8px;
+  height: 7px;
+  width: 100%;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.maspik-matrix-usage-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.maspik-matrix-usage-progress-fill.tone-success {
+  background: #22c55e;
+}
+
+.maspik-matrix-usage-progress-fill.tone-warning {
+  background: #f59e0b;
+}
+
+.maspik-matrix-usage-progress-fill.tone-danger {
+  background: #ef4444;
+}
+
+.maspik-matrix-usage-status {
+  margin-top: 8px;
+  color: #166534;
+}
+
+.maspik-matrix-usage-status.is-warning {
+  color: #92400e;
+}
+
+.maspik-matrix-usage-status.is-paused {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.maspik-matrix-usage-value {
+  margin-top: 8px;
+  color: #475351;
+}
+
+.maspik-matrix-usage-upgrade {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.maspik-matrix-usage-upgrade-text {
+  color: #1d2327;
+}
+
+.maspik-matrix-usage-card a.maspik-btn-self,
+.maspik-matrix-usage-card a.maspik-btn-self:hover {
+  color: #fff;
+}
+
+/* Matrix usage panel (section 3): legend + table */
+.maspik-matrix-section--usage .maspik-matrix-usage-intro {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+  max-width: 72ch;
+}
+
+.maspik-matrix-usage-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 20px;
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e8ecf0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+  .maspik-matrix-usage-legend--pro {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.maspik-matrix-usage-legend__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.maspik-matrix-usage-legend__term {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  letter-spacing: 0.01em;
+}
+
+.maspik-matrix-usage-legend__desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.maspik-matrix-usage-scroll {
+  margin-top: 2px;
+}
+
+.maspik-matrix-usage-near-cap-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.maspik-matrix-usage-near-cap-notice__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #92400e;
+  max-width: min(100%, 52ch);
+}
+
+.maspik-matrix-usage-near-cap-notice__btn {
+  flex-shrink: 0;
+}
+
+.maspik-matrix-usage-near-cap-notice .maspik-matrix-usage-near-cap-notice__btn,
+.maspik-matrix-usage-near-cap-notice .maspik-matrix-usage-near-cap-notice__btn:hover {
+  color: #fff;
+}
+
+.maspik-matrix-usage-table {
+  table-layout: fixed;
+  min-width: 680px;
+}
+
+.maspik-matrix-usage-table--pro {
+  min-width: 480px;
+}
+
+.maspik-matrix-usage-table col.maspik-matrix-usage-col-month {
+  width: 26%;
+}
+
+.maspik-matrix-usage-table col.maspik-matrix-usage-col-num {
+  width: 14.8%;
+}
+
+.maspik-matrix-usage-table--pro col.maspik-matrix-usage-col-month {
+  width: 30%;
+}
+
+.maspik-matrix-usage-table--pro col.maspik-matrix-usage-col-num {
+  width: 23.33%;
+}
+
+.maspik-matrix-usage-table thead th.maspik-matrix-usage-num {
+  text-align: end;
+}
+
+.maspik-matrix-usage-table tbody th.maspik-matrix-usage-month {
+  text-align: start;
+  font-weight: 500;
+  color: #1d2327;
+  vertical-align: middle;
+  border-top: 1px solid #f0f0f1;
+  padding: 10px 12px !important;
+  font-size: 13px;
+}
+
+.maspik-matrix-usage-table tbody tr:first-child th.maspik-matrix-usage-month,
+.maspik-matrix-usage-table tbody tr:first-child td {
+  border-top: none;
+}
+
+.maspik-matrix-usage-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.maspik-matrix-usage-cell-quota {
+  vertical-align: middle;
+}
+
+.maspik-matrix-usage-rate {
+  font-weight: 500;
+  color: #334155;
+}
+
+.maspik-matrix-usage-table tbody tr:hover th.maspik-matrix-usage-month,
+.maspik-matrix-usage-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.maspik-matrix-usage-quota {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.maspik-matrix-usage-quota__label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d2327;
+  line-height: 1.2;
+  text-align: end;
+}
+
+.maspik-matrix-usage-quota__track {
+  display: block;
+  height: 6px;
+  width: 100%;
+  max-width: 140px;
+  background: #eee;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.maspik-matrix-usage-quota__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 0;
+  transition: width 0.2s ease;
+}
+
+.maspik-matrix-usage-quota__fill.tone-success {
+  background: #22c55e;
+}
+
+.maspik-matrix-usage-quota__fill.tone-warning {
+  background: #f59e0b;
+}
+
+.maspik-matrix-usage-quota__fill.tone-danger {
+  background: #ef4444;
+}
+
 .maspik-matrix-accordion-wrap > .maspik-save-submit-wrap {
   margin-top: 4px;
   margin-bottom: 0;
@@ -2740,6 +3542,13 @@ body.rtl .maspik-toggle-and-chip {
   gap: 12px;
   margin: 24px 0;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Override global form.downloadform margin so it doesn't inflate the flex row */
+.spam-log-wrap .spam-log-button-wrapper form,
+.spam-log-wrap .spam-log-button-wrapper .downloadform {
+  margin: 0;
 }
 
 .spam-log-wrap .maspik-btn {
@@ -3635,6 +4444,19 @@ tr.row-entries.not-a-spam button.entry-action-btn.not-spam-action {
 .maspik-ai-toggle-wrap {
   margin-bottom: 20px;
 }
+.maspik-ai-toggle-wrap {
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.maspik-ai-toggle-wrap:hover {
+  background: #fbfbfc;
+  border-color: #dcdfe4;
+}
 
 .maspik-ai-toggle-wrap .maspik-toggle {
   margin-right: 10px;
@@ -3644,6 +4466,219 @@ tr.row-entries.not-a-spam button.entry-action-btn.not-spam-action {
   font-weight: 600;
   color: #333;
   font-size: 14px;
+}
+
+.maspik-ai-toggle-wrap.maspik-inputgate-toggle-wrap {
+  position: relative;
+  background: linear-gradient(152deg, #ffffff 0%, #fdf8f6 48%, #faf0eb 100%);
+  border-color: rgba(196, 83, 43, 0.22);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 10px 28px rgba(196, 83, 43, 0.06);
+}
+
+.maspik-inputgate-network-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-inline-start: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  vertical-align: middle;
+}
+
+.maspik-inputgate-network-badge--connected {
+  color: #166534;
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.18);
+}
+
+.maspik-inputgate-network-badge--off {
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.16);
+}
+
+.maspik-inputgate-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+}
+
+.maspik-inputgate-live-dot--off {
+  background: #94a3b8;
+  box-shadow: none;
+}
+
+.maspik-inputgate-live-dot--pulse {
+  animation: maspik-inputgate-live-pulse 2.4s ease-in-out infinite;
+}
+
+.maspik-inputgate-live-dot--warn {
+  background: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+}
+
+@keyframes maspik-inputgate-live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18);
+    opacity: 1;
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.08);
+    opacity: 0.88;
+  }
+}
+
+.maspik-inputgate-live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #166534;
+}
+
+.maspik-inputgate-live-status--paused {
+  color: #b45309;
+}
+
+/* InputGate cloud protection panel (main options) */
+.maspik-inputgate-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.maspik-inputgate-panel__body {
+  margin-top: 2px;
+}
+
+.maspik-inputgate-panel__desc {
+  margin: 0 0 8px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #334155;
+  max-width: 52em;
+}
+
+.maspik-inputgate-panel__desc--secondary {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.maspik-inputgate-panel__options-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.maspik-inputgate-panel__connection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #94a3b8;
+}
+
+.maspik-inputgate-panel__connection-text {
+  color: #94a3b8;
+}
+
+.maspik-inputgate-panel__connection-text::after {
+  content: "·";
+  margin-inline-start: 10px;
+  color: #cbd5e1;
+}
+
+.maspik-inputgate-panel__site-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #64748b !important;
+  text-decoration: none;
+}
+
+.maspik-inputgate-panel__site-link:hover,
+.maspik-inputgate-panel__site-link:focus {
+  color: #c4532b !important;
+  text-decoration: underline;
+}
+
+.maspik-inputgate-panel__site-link .dashicons {
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.maspik-inputgate-panel__privacy {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.maspik-inputgate-icon {
+  flex-shrink: 0;
+}
+
+.maspik-inputgate-level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 83, 43, 0.22);
+  background: linear-gradient(135deg, rgba(253, 246, 243, 0.95) 0%, rgba(252, 238, 232, 0.85) 100%);
+  box-shadow: 0 1px 2px rgba(196, 83, 43, 0.08);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #a84323;
+  white-space: nowrap;
+}
+
+.maspik-inputgate-level-badge.maspik-matrix-mode-badge--catch-50 {
+  border-color: rgba(100, 116, 139, 0.25);
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  color: #475569;
+}
+
+.maspik-inputgate-level-badge.maspik-matrix-mode-badge--catch-65 {
+  border-color: rgba(196, 83, 43, 0.2);
+  background: linear-gradient(135deg, #fdf6f3 0%, #fceee8 100%);
+  color: #b84a2a;
+}
+
+.maspik-inputgate-level-badge.maspik-matrix-mode-badge--catch-90 {
+  border-color: rgba(196, 83, 43, 0.28);
+  background: linear-gradient(135deg, #fceee8 0%, #fadfd4 100%);
+  color: #9a3d21;
 }
 
 .maspik-matrix-main-heading {
@@ -3681,6 +4716,9 @@ tr.row-entries.not-a-spam button.entry-action-btn.not-spam-action {
   white-space: nowrap;
   align-self: flex-start;
   margin-top: 1px;
+}
+.maspik-matrix-mode-card input[type=radio]:checked::before {
+  background-color: #024921;
 }
 
 .rtl .maspik-ai-toggle-wrap .maspik-toggle {
@@ -3809,6 +4847,11 @@ tr.row-entries.not-a-spam button.entry-action-btn.not-spam-action {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+}
+
+.maspik-ai-logs-table-container {
+  max-height: 500px;
+  overflow: auto;
 }
 
 .maspik-ai-logs-table-button {
@@ -4188,3 +5231,704 @@ tr.row-entries.not-a-spam button.entry-action-btn.not-spam-action {
 .rtl #wpcontent > #wpbody > #wpfooter {
   margin-right: 0 !important;
 }
+.rtl .wrap.maspik-mainpage {
+  margin: 20px 0px 20px 20px;
+}
+
+/* Import / Export page */
+#exp-imp-settings .maspik-import-export-head {
+  max-width: 980px;
+}
+
+#exp-imp-settings .maspik-import-export-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-top: 20px;
+  max-width: 980px;
+}
+
+#exp-imp-settings .maspik-import-export-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  padding: 22px;
+}
+
+#exp-imp-settings .maspik-import-export-card h2 {
+  margin: 0 0 10px;
+  font-size: 22px;
+}
+
+#exp-imp-settings .maspik-import-export-card-desc {
+  margin: 0 0 18px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+#exp-imp-settings #export-settings-form,
+#exp-imp-settings #import-settings-form {
+  margin: 0;
+}
+
+#exp-imp-settings #export-settings-form .submit,
+#exp-imp-settings #import-settings-form .submit {
+  margin: 0;
+  padding: 0;
+}
+
+#exp-imp-settings .maspik-import-export-file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+#exp-imp-settings .maspik-import-export-file input[type="file"] {
+  width: 100%;
+  max-width: 100%;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 10px;
+}
+
+#exp-imp-settings .maspik-import-export-help {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 782px) {
+  #exp-imp-settings .maspik-import-export-card {
+    padding: 18px;
+  }
+}
+
+/* ============================================================
+   Spam Log — False Positive modal (moved from inline styles)
+   ============================================================ */
+
+.fp-modal-content  { max-width: 500px; }
+.fp-modal-inner    { padding: 30px; text-align: center; }
+.fp-modal-header   { margin-bottom: 20px; }
+
+.fp-icon {
+  font-size: 48px; width: 48px; height: 48px;
+  color: #2271b1; margin-bottom: 10px; display: block;
+}
+
+.fp-modal-title { margin: 0; font-size: 22px; font-weight: 600; color: #1d2327; }
+.fp-modal-body  { margin-bottom: 25px; text-align: left; }
+.fp-main-message { font-size: 15px; line-height: 1.6; color: #1d2327; margin: 0 0 12px; }
+.fp-sub-message  { font-size: 13px; line-height: 1.5; color: #646970; margin: 0; }
+
+.fp-modal-feedback { text-align: center; padding: 20px 0; }
+.fp-modal-feedback .fp-feedback-icon {
+  font-size: 48px; width: 48px; height: 48px;
+  color: #00a32a; display: block; margin: 0 auto 12px;
+}
+.fp-modal-feedback p { margin: 0; font-size: 1.05em; color: #1d2327; }
+
+.fp-modal-actions { display: flex; flex-direction: column; gap: 10px; }
+
+.fp-button {
+  padding: 12px 20px; font-size: 14px; font-weight: 500;
+  border: none; border-radius: 4px; cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; text-decoration: none;
+}
+.fp-button .dashicons { font-size: 18px; width: 18px; height: 18px; }
+
+.fp-button-primary             { background-color: #2271b1; color: #fff; }
+.fp-button-primary:hover       { background-color: #135e96; color: #fff; }
+.fp-button-secondary           { background-color: #f0f0f1; color: #2c3338; }
+.fp-button-secondary:hover     { background-color: #dcdcde; color: #2c3338; }
+.fp-button-link                { background: transparent; color: #646970; padding: 8px; font-weight: 400; }
+.fp-button-link:hover          { color: #2271b1; background: transparent; }
+
+.log-warp tbody { max-width: 100%; }
+
+/* ============================================================
+   Spam Log — filter bar, sort headers, pagination
+   ============================================================ */
+
+/* ── Controls card ─────────────────────────────────────────── */
+.spam-log-wrap .maspik-log-controls {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 24px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f0f0f1;
+}
+
+.spam-log-wrap .maspik-log-controls-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Filter groups (label + input stacked) ─────────────────── */
+.spam-log-wrap .maspik-log-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  flex: 1;
+}
+
+.spam-log-wrap .maspik-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Reset fieldset defaults for the date-range group */
+fieldset.maspik-filter-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+fieldset.maspik-filter-group legend.maspik-filter-label {
+  float: left; /* legend participates in normal flow when floated */
+  width: 100%;
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.spam-log-wrap .maspik-filter-group--date .maspik-date-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spam-log-wrap .maspik-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8c8f94;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.spam-log-wrap .maspik-filter-label .dashicons {
+  font-size: 13px;
+  width: 13px;
+  height: 13px;
+  color: #b0b3b8;
+}
+
+/* ── Filter inputs ─────────────────────────────────────────── */
+.spam-log-wrap .maspik-filter-input {
+  height: 36px;
+  padding: 0 11px;
+  border: 1.5px solid #dde0e3;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #2c3338;
+  background: #fafbfc;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) inset;
+  min-width: 0;
+}
+
+.spam-log-wrap .maspik-filter-input:focus {
+  outline: none;
+  border-color: #F48722;
+  box-shadow: 0 0 0 3px rgba(244, 135, 34, 0.12);
+  background: #fff;
+}
+
+.spam-log-wrap .maspik-filter-input.has-value {
+  border-color: #F48722;
+  background: #fffaf5;
+}
+
+.spam-log-wrap #maspik-filter-type  { width: 140px; }
+.spam-log-wrap #maspik-filter-ip    { width: 130px; }
+.spam-log-wrap #maspik-filter-country { width: 110px; }
+.spam-log-wrap #maspik-filter-source  { width: 120px; }
+.spam-log-wrap .maspik-date-input   { width: 148px; }
+
+.spam-log-wrap select.maspik-filter-input {
+  padding-right: 28px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238c8f94' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
+.spam-log-wrap .maspik-date-sep {
+  color: #adb5bd;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Clear button ──────────────────────────────────────────── */
+.spam-log-wrap .maspik-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px;
+  height: 36px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1.5px solid #dde0e3;
+  background: #f6f7f7;
+  color: #646970;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.spam-log-wrap .maspik-clear-btn:hover {
+  border-color: #F48722;
+  color: #F48722;
+  background: #fff8f2;
+}
+
+.spam-log-wrap .maspik-clear-btn .dashicons {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Toolbar row ───────────────────────────────────────────── */
+.spam-log-wrap .maspik-log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #f0f0f1;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.spam-log-wrap .maspik-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spam-log-wrap .maspik-per-page-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #646970;
+  cursor: default;
+}
+
+.spam-log-wrap .maspik-per-page-label .dashicons {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  color: #adb5bd;
+}
+
+.spam-log-wrap .maspik-per-page-select {
+  height: 32px;
+  padding: 0 28px 0 10px;
+  border: 1.5px solid #dde0e3;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fafbfc url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238c8f94' d='M1 1l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 9px center;
+  appearance: none;
+  -webkit-appearance: none;
+  color: #2c3338;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.spam-log-wrap .maspik-per-page-select:focus {
+  outline: none;
+  border-color: #F48722;
+}
+
+/* ── Loading spinner ───────────────────────────────────────── */
+.spam-log-wrap .maspik-log-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.spam-log-wrap .maspik-spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f0f0f1;
+  border-top-color: #F48722;
+  border-radius: 50%;
+  animation: maspik-spin 0.65s linear infinite;
+}
+
+@keyframes maspik-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Dim table while loading */
+#maspik-log-table-wrap {
+  transition: opacity 0.2s ease;
+}
+
+/* ── Sortable column headers ───────────────────────────────── */
+.spam-log-wrap .maspik-log-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 24px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.spam-log-wrap .maspik-log-table th.sortable:hover {
+  background: #f0f4f8;
+  color: #F48722;
+}
+
+.spam-log-wrap .maspik-log-table th.sort-active {
+  color: #F48722;
+  background: #fff8f2;
+}
+
+.spam-log-wrap .maspik-log-table th .sort-indicator {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.spam-log-wrap .maspik-log-table th.sortable:hover .sort-indicator {
+  opacity: 0.8;
+}
+
+.spam-log-wrap .maspik-log-table th.sort-active .sort-indicator {
+  opacity: 1;
+  color: #F48722;
+}
+
+/* ── Empty cell ────────────────────────────────────────────── */
+.spam-log-wrap .maspik-log-table .maspik-log-empty {
+  text-align: center;
+  color: #8c8f94;
+  padding: 48px 16px;
+  font-size: 14px;
+}
+
+/* ── Pagination bar ────────────────────────────────────────── */
+.spam-log-wrap .maspik-log-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 2px;
+  margin-top: 4px;
+}
+
+.spam-log-wrap .maspik-pagination-info {
+  font-size: 13px;
+  color: #8c8f94;
+}
+
+.spam-log-wrap .maspik-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.spam-log-wrap .maspik-page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1.5px solid #dde0e3;
+  background: #fff;
+  color: #2c3338;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.spam-log-wrap .maspik-page-btn:not(:disabled):hover {
+  border-color: #F48722;
+  color: #F48722;
+  background: #fff8f2;
+}
+
+.spam-log-wrap .maspik-page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.spam-log-wrap .maspik-page-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #2c3338;
+  margin: 0 4px;
+}
+
+.spam-log-wrap .maspik-page-input {
+  width: 52px;
+  height: 34px;
+  text-align: center;
+  border: 1.5px solid #dde0e3;
+  border-radius: 8px;
+  font-size: 13px;
+  padding: 0 4px;
+  color: #2c3338;
+  -moz-appearance: textfield;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.spam-log-wrap .maspik-page-input::-webkit-inner-spin-button,
+.spam-log-wrap .maspik-page-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.spam-log-wrap .maspik-page-input:focus {
+  outline: none;
+  border-color: #F48722;
+  box-shadow: 0 0 0 3px rgba(244, 135, 34, 0.12);
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .spam-log-wrap #maspik-filter-ip      { width: 110px; }
+  .spam-log-wrap #maspik-filter-country { width: 95px;  }
+  .spam-log-wrap #maspik-filter-source  { width: 105px; }
+  .spam-log-wrap .maspik-date-input     { width: 130px; }
+}
+
+@media (max-width: 782px) {
+  .spam-log-wrap .maspik-log-controls-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .spam-log-wrap .maspik-log-filters {
+    flex-direction: column;
+  }
+  .spam-log-wrap .maspik-filter-group {
+    width: 100%;
+  }
+  .spam-log-wrap .maspik-filter-input,
+  .spam-log-wrap #maspik-filter-type,
+  .spam-log-wrap #maspik-filter-ip,
+  .spam-log-wrap #maspik-filter-country,
+  .spam-log-wrap #maspik-filter-source {
+    width: 100%;
+  }
+  .spam-log-wrap .maspik-date-input {
+    flex: 1;
+  }
+  .spam-log-wrap .maspik-clear-btn {
+    align-self: flex-start;
+  }
+  .spam-log-wrap .maspik-log-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ============================================================
+   Toast notifications (shared across all admin pages)
+   ============================================================ */
+
+.maspik-toast-wrap {
+  position: fixed;
+  top: 48px;
+  right: 20px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.maspik-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--maspik-radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  max-width: 360px;
+  line-height: 1.4;
+}
+
+.maspik-toast--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.maspik-toast--success { background: #1e7e34; }
+.maspik-toast--error   { background: var(--maspik-red); }
+.maspik-toast--warning { background: var(--maspik-orange); }
+.maspik-toast--info    { background: #2271b1; }
+
+.maspik-toast .dashicons {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Unified confirm modal (replaces native confirm() dialogs)
+   ============================================================ */
+
+#maspik-confirm-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999998;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+
+#maspik-confirm-modal.is-open {
+  display: flex;
+}
+
+.maspik-confirm-box {
+  background: #fff;
+  border-radius: var(--maspik-radius-lg);
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  text-align: center;
+  animation: maspik-modal-in 0.2s ease;
+}
+
+@keyframes maspik-modal-in {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.maspik-confirm-box .maspik-confirm-icon {
+  font-size: 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 16px;
+  display: block;
+}
+
+.maspik-confirm-box .maspik-confirm-icon--warn { color: var(--maspik-orange); }
+.maspik-confirm-box .maspik-confirm-icon--danger { color: var(--maspik-red); }
+
+.maspik-confirm-box p {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #2c3338;
+}
+
+.maspik-confirm-box .maspik-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.maspik-confirm-btn {
+  padding: 10px 22px;
+  border-radius: var(--maspik-radius);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.maspik-confirm-btn--ok {
+  background: var(--maspik-orange);
+  color: #fff;
+}
+.maspik-confirm-btn--ok:hover   { background: var(--maspik-orange-dark); }
+
+.maspik-confirm-btn--ok-danger {
+  background: var(--maspik-red);
+  color: #fff;
+}
+.maspik-confirm-btn--ok-danger:hover { background: var(--maspik-red-dark); }
+
+.maspik-confirm-btn--cancel {
+  background: #f0f0f1;
+  color: #2c3338;
+}
+.maspik-confirm-btn--cancel:hover { background: #dcdcde; }
+
+/* ── AI secret inline feedback ───────────────────────────────── */
+.maspik-secret-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 10px;
+}
+.maspik-secret-feedback--success { color: #1e7e34; }
+.maspik-secret-feedback--error   { color: var(--maspik-red, #dc3545); }
+
+/* ── Import: selected filename display ───────────────────────── */
+.maspik-import-export-file .maspik-file-name {
+  font-weight: 400;
+  color: #646970;
+  font-size: 12px;
+  display: block;
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+
+/* ── Deprecated import notice ─────────────────────────────────── */
+.maspik-deprecated-notice {
+  margin: 12px 0;
+}
+
+/* ── Modal close button accessible ───────────────────────────── */
+.modal .close-button,
+.maspik-modal .maspik-modal-close {
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* ── Reset Log confirmation modal inside spam log ─────────────── */
+#reset-log-confirm-modal .maspik-confirm-icon { color: var(--maspik-red); }

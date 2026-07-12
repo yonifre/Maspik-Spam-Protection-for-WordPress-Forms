@@ -66,7 +66,7 @@
 				arrow.removeClass('rotated');
 			} else {
 				content.addClass('active').slideDown(300);
-				arrow.removeClass('rotated');
+				arrow.addClass('rotated');
 			}
 		});
 
@@ -87,19 +87,22 @@
 					nonce: maspik_ajax.nonce
 				},
 				success: function(response) {
+					// Clear any previous feedback message.
+					$('.maspik-secret-feedback').remove();
+
 					if (response.success) {
 						input.val(response.data.secret);
-						// Show success message
-						button.after('<span class="maspik-success-message" style="color: green; margin-left: 10px;">✓ New secret generated!</span>');
-						setTimeout(function() {
-							$('.maspik-success-message').fadeOut();
-						}, 3000);
+						button.after('<span class="maspik-secret-feedback maspik-secret-feedback--success">✓ New secret generated!</span>');
 					} else {
-						alert('Error generating secret: ' + response.data);
+						var errMsg = (response.data && typeof response.data === 'string') ? response.data : 'Error generating secret.';
+						button.after('<span class="maspik-secret-feedback maspik-secret-feedback--error">✗ ' + errMsg + '</span>');
 					}
+					setTimeout(function() { $('.maspik-secret-feedback').fadeOut(400, function () { $(this).remove(); }); }, 3500);
 				},
 				error: function() {
-					alert('Error generating secret. Please try again.');
+					$('.maspik-secret-feedback').remove();
+					button.after('<span class="maspik-secret-feedback maspik-secret-feedback--error">✗ Server error. Please try again.</span>');
+					setTimeout(function() { $('.maspik-secret-feedback').fadeOut(400, function () { $(this).remove(); }); }, 3500);
 				},
 				complete: function() {
 					button.prop('disabled', false).text('Generate New');

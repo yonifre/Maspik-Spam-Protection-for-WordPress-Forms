@@ -196,6 +196,17 @@ function maspik_validate_cf7_process( $result, $tags ) {
         }
     }
 
+    // CF7 form ID: signal Matrix via plugin_spam_likelihood floor (7) when $_POST['_wpcf7'] is missing.
+    // Legitimate CF7 submissions always include _wpcf7 (the form ID); a missing value suggests a
+    // direct/forged POST that bypassed the form. Sentinel `no_cf7_id` is forwarded as the referrer
+    // value so the Matrix API can correlate this signal (see maspik_matrix_referrer_for_payload).
+    // Gated by NeedPageurl: only signal when the page-URL spam check is enabled in settings.
+    $cf7_need_pageurl = efas_get_spam_api( 'NeedPageurl', 'bool' );
+    if ( ! isset( $_POST['_wpcf7'] ) && $cf7_need_pageurl && function_exists( 'maspik_matrix_raise_plugin_spam_likelihood_floor' ) ) {
+        $referrer = 'no_cf7_id';
+        maspik_matrix_raise_plugin_spam_likelihood_floor( 7, $referrer );
+    }
+
     // General Check
     $ip = maspik_get_real_ip();
     $GeneralCheck = GeneralCheck( $ip, $spam, $reason, $_POST, "cf7", $content_fields );
@@ -216,20 +227,13 @@ function maspik_validate_cf7_process( $result, $tags ) {
 }
 
 function maspik_honeypot_to_cf7_form( $form_content ) {
-    if ( efas_get_spam_api( 'maspikHoneypot', 'bool' ) || efas_get_spam_api( 'maspikTimeCheck', 'bool' ) || maspik_get_settings( 'maspikYearCheck' ) ) {
+    if ( efas_get_spam_api( 'maspikHoneypot', 'bool' ) ) {
         $custom_html = '';
 
         if ( efas_get_spam_api( 'maspikHoneypot', 'bool' ) ) {
             $custom_html .= '<div class="wpcf7-form-control-wrap maspik-field">
                 <label for="full-name-maspik-hp" class="wpcf7-form-control-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
                 <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="full-name-maspik-hp" id="full-name-maspik-hp" class="wpcf7-form-control wpcf7-text" placeholder="' . esc_attr( maspik_honeypot_aria_label() ) . '">
-            </div>';
-        }
-
-        if ( maspik_get_settings( 'maspikYearCheck' ) ) {
-            $custom_html .= '<div class="wpcf7-form-control-wrap maspik-field">
-                <label for="Maspik-currentYear" class="wpcf7-form-control-label">' . esc_html( maspik_honeypot_aria_label() ) . '</label>
-                <input size="1" type="text" autocomplete="off" aria-hidden="true" tabindex="-1" aria-label="' . esc_attr( maspik_honeypot_aria_label() ) . '" name="Maspik-currentYear" id="Maspik-currentYear" class="wpcf7-form-control wpcf7-text" placeholder="">
             </div>';
         }
 
