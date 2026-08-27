@@ -1,0 +1,37 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: MASPIK\n"
+"Report-Msgid-Bugs-To: https://wpmaspik.com\n"
+"PO-Revision-Date: 2026-07-16 00:00+0000\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+msgid "Leave this field empty"
+msgstr "اترك هذا الحقل فارغًا"
+
+msgid "Comment blocked"
+msgstr "تم حظر التعليق"
+
+msgid "This submission was blocked as spam."
+msgstr "تم حظر هذا الإرسال باعتباره بريدًا عشوائيًا."
+
+
+
+
+msgid "No thanks"
+msgstr "لا، شكرًا"
+
+msgid "Your InputGate is currently using IP-only protection"
+msgstr "‏InputGate لديك يستخدم حاليًا حماية بعنوان IP فقط"
+
+msgid "Your InputGate is checking the sender’s IP only. Full Protection goes further, analyzing submitted content, user behavior, and multiple additional spam signals to catch significantly more spam."
+msgstr "يتحقق InputGate لديك من عنوان IP الخاص بالمُرسل فقط. أما الحماية الكاملة فتذهب أبعد من ذلك، إذ تحلل المحتوى المُرسَل وسلوك المستخدم وإشارات بريد مزعج إضافية عديدة لاكتشاف قدر أكبر بكثير من البريد المزعج."
+
+msgid "Enable Full Protection"
+msgstr "تفعيل الحماية الكاملة"
+
+msgid "See settings"
+msgstr "عرض الإعدادات"
