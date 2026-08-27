@@ -217,7 +217,7 @@ Need the reason? `maspik_check_spam()` returns the message to show the visitor, 
 
 The original version 2 filter (`maspik_validate_custom_form_fields`) continues to work unchanged, so existing integrations keep running after the upgrade.
 
-Full example: https://wpmaspik.com/documentation/custom-php-form/
+Full example: https://wpmaspik.com/documentation/custom-form/
 
 = Documentation =
 
