@@ -139,3 +139,15 @@ msgid "%s protection layer active"
 msgid_plural "%s protection layers active"
 msgstr[0] "طبقة حماية واحدة مفعّلة"
 msgstr[1] "%s طبقات حماية مفعّلة"
+
+msgid "For your information: Maspik is checking the sender’s IP address only, not the content of the submission. Full Protection analyses the content too and catches more spam — it is free."
+msgstr "للعلم: يفحص Maspik عنوان IP الخاص بالمُرسِل فقط، وليس محتوى الإرسال. الحماية الكاملة تحلّل المحتوى أيضاً وتكتشف المزيد من السبام، وهي مجانية."
+
+msgid "InputGate is switched off. It is our cloud layer, and the one that catches the spam your own rules have not seen before. We recommend turning it on."
+msgstr "‏InputGate معطّل. إنها طبقتنا السحابية، وهي التي تكتشف السبام الذي لم تره قواعدك بعد. ننصح بتفعيلها."
+
+msgid "Turn on InputGate"
+msgstr "تفعيل InputGate"
+
+msgid "Learn more"
+msgstr "اعرف المزيد"

@@ -36,7 +36,7 @@ final class FullModeNudge
     public const LEGACY_DISMISSED_OPTION = 'maspik_matrix_full_mode_nudge_hidden_v4';
 
     /** Documentation for the layer this notice offers to switch on. */
-    private const LEARN_MORE_URL = 'https://wpmaspik.com/documentation/ai-spam-check/';
+    public const LEARN_MORE_URL = 'https://wpmaspik.com/documentation/ai-spam-check/';
 
     private const ACTION = 'maspik_matrix_nudge';
     private const NONCE = 'maspik_matrix_nudge';
@@ -47,6 +47,21 @@ final class FullModeNudge
     public function __construct(Settings $settings)
     {
         $this->settings = $settings;
+    }
+
+    /**
+     * The nonce-protected link that switches InputGate on and sets it to
+     * analyse the whole submission.
+     *
+     * Exposed because the Dashboard widget offers the same thing, and two
+     * surfaces inventing two ways to flip one setting is how they end up
+     * disagreeing. handleAction() saves both `maspik_ai_enabled` and
+     * `maspik_matrix_api_mode`, so this one URL is correct whether the layer is
+     * off entirely or merely limited to the IP check.
+     */
+    public static function activateUrl(): string
+    {
+        return wp_nonce_url(add_query_arg(self::ACTION, 'full'), self::NONCE);
     }
 
     public function register(): void

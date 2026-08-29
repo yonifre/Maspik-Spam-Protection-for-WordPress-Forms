@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Maspik\Admin;
 
 use Maspik\Application\CheckFactory;
+use Maspik\Admin\FullModeNudge;
 use Maspik\Infrastructure\Logging\LogRepository;
 use Maspik\Infrastructure\Settings\Settings;
 
@@ -99,6 +100,7 @@ final class DashboardWidget
             $this->breakdown();
         }
 
+        $this->inputGate();
         $this->footer($pages);
         echo '</div>';
     }
@@ -244,6 +246,46 @@ final class DashboardWidget
         return isset($names[$id]) && $id !== '' ? $names[$id] : ($id !== '' ? $id : __('Unknown', 'contact-forms-anti-spam'));
     }
 
+    /**
+     * InputGate's standing, and the one action that improves it.
+     *
+     * The cloud layer has three states and only one of them needs saying. Off
+     * is the weakest configuration there is — the local rules only catch what
+     * someone already thought to write down — and IP-only is the quiet one: the
+     * layer reports as enabled while form content is never analysed, so a site
+     * owner reasonably believes they have protection they do not have. Both are
+     * fixed by the same nonce-protected link FullModeNudge already owns.
+     *
+     * Nothing is printed when the layer is fully on. A widget that congratulates
+     * you every day for a setting you are not changing is a widget people learn
+     * to skip, and then they skip the day it matters.
+     */
+    private function inputGate(): void
+    {
+        $enabled = $this->settings->boolEffective('maspik_ai_enabled');
+        $ipOnly = $this->settings->matrixMode() === '2';
+
+        if ($enabled && ! $ipOnly) {
+            return;
+        }
+
+        $text = $enabled
+            ? __('For your information: Maspik is checking the sender’s IP address only, not the content of the submission. Full Protection analyses the content too and catches more spam — it is free.', 'contact-forms-anti-spam')
+            : __('InputGate is switched off. It is our cloud layer, and the one that catches the spam your own rules have not seen before. We recommend turning it on.', 'contact-forms-anti-spam');
+        $action = $enabled
+            ? __('Enable Full Protection', 'contact-forms-anti-spam')
+            : __('Turn on InputGate', 'contact-forms-anti-spam');
+
+        echo '<div class="mkw-gate">';
+        echo '<p class="mkw-gate__text">' . esc_html($text) . '</p>';
+        echo '<p class="mkw-gate__actions">';
+        echo '<a class="button button-primary button-small" href="' . esc_url(FullModeNudge::activateUrl()) . '">'
+            . esc_html($action) . '</a> ';
+        echo '<a class="mkw-gate__learn" href="' . esc_url(FullModeNudge::LEARN_MORE_URL) . '" target="_blank" rel="noopener noreferrer">'
+            . esc_html__('Learn more', 'contact-forms-anti-spam') . '</a>';
+        echo '</p></div>';
+    }
+
     private function fact(string $label, string $value, ?int $count): void
     {
         echo '<li class="mkw-fact">';
@@ -348,6 +390,10 @@ final class DashboardWidget
 .mkw-fact__value{text-align:right;min-width:0;overflow-wrap:anywhere}
 .mkw-fact__count{color:#646970;font-variant-numeric:tabular-nums}
 .mkw-notice{margin:12px 0 0;padding:10px 12px;background:#f6f7f7;border-left:3px solid #dba617;font-size:13px;color:#50575e}
+.mkw-gate{margin:12px 0 0;padding:12px;background:#f0f6fc;border-left:3px solid #72aee6;border-radius:2px}
+.mkw-gate__text{margin:0 0 10px;font-size:13px;line-height:1.5;color:#1d2327}
+.mkw-gate__actions{margin:0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.mkw-gate__learn{font-size:12px}
 .mkw-links{margin:12px 0 0;padding-top:12px;border-top:1px solid #f0f0f1;font-size:13px}
 @media(prefers-color-scheme:dark){.mkw{color:inherit}}
 </style>';
