@@ -35,3 +35,107 @@ msgstr "Activer la Protection complète"
 
 msgid "See settings"
 msgstr "Voir les réglages"
+
+msgid "Maspik – Spam protection"
+msgstr "Maspik – Protection anti-spam"
+
+msgid "blocked in the last 30 days"
+msgstr "bloqués ces 30 derniers jours"
+
+msgid "blocked in total"
+msgstr "bloqués au total"
+
+msgid "%s today"
+msgstr "%s aujourd’hui"
+
+msgid "Caught most by"
+msgstr "Détectés surtout par"
+
+msgid "Most targeted form"
+msgstr "Formulaire le plus visé"
+
+msgid "Last blocked"
+msgstr "Dernier blocage"
+
+msgid "%s ago"
+msgstr "il y a %s"
+
+msgid "Nothing blocked in the last 30 days. Your forms are quiet."
+msgstr "Rien de bloqué ces 30 derniers jours. Vos formulaires sont au calme."
+
+msgid "No protection layer is switched on yet."
+msgstr "Aucune couche de protection n’est encore activée."
+
+msgid "Logging is off, so there is nothing to break down here. Blocking itself is unaffected."
+msgstr "La journalisation est désactivée, il n’y a donc rien à détailler ici. Le blocage n’est pas affecté."
+
+msgid "Turn on logging"
+msgstr "Activer la journalisation"
+
+msgid "Open the log"
+msgstr "Ouvrir le journal"
+
+msgid "Set up protection"
+msgstr "Configurer la protection"
+
+msgid "View log"
+msgstr "Voir le journal"
+
+msgid "Blocked submissions per day over the last 30 days"
+msgstr "Envois bloqués par jour sur les 30 derniers jours"
+
+msgid "Unknown"
+msgstr "Inconnu"
+
+msgid "Honeypot"
+msgstr "Honeypot"
+
+msgid "Verification Key"
+msgstr "Clé de vérification"
+
+msgid "InputGate"
+msgstr "InputGate"
+
+msgid "Text rules"
+msgstr "Règles de texte"
+
+msgid "Email rules"
+msgstr "Règles d’e-mail"
+
+msgid "URL rules"
+msgstr "Règles d’URL"
+
+msgid "Country rules"
+msgstr "Règles de pays"
+
+msgid "IP blocklist"
+msgstr "Liste de blocage IP"
+
+msgid "IP reputation"
+msgstr "Réputation IP"
+
+msgid "Phone format"
+msgstr "Format de téléphone"
+
+msgid "Link limit"
+msgstr "Limite de liens"
+
+msgid "Language required"
+msgstr "Langue requise"
+
+msgid "Language forbidden"
+msgstr "Langue interdite"
+
+msgid "Length limit"
+msgstr "Limite de longueur"
+
+msgid "Protection"
+msgstr "Protection"
+
+msgid "Emoji"
+msgstr "Emojis"
+
+msgid "%s protection layer active"
+msgid_plural "%s protection layers active"
+msgstr[0] "%s couche de protection active"
+msgstr[1] "%s couches de protection actives"

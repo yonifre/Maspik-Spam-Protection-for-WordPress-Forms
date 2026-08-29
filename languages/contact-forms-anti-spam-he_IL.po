@@ -35,3 +35,107 @@ msgstr "הפעלת ההגנה המלאה"
 
 msgid "See settings"
 msgstr "הצגת ההגדרות"
+
+msgid "Maspik – Spam protection"
+msgstr "Maspik – הגנה מספאם"
+
+msgid "blocked in the last 30 days"
+msgstr "נחסמו ב-30 הימים האחרונים"
+
+msgid "blocked in total"
+msgstr "נחסמו בסך הכול"
+
+msgid "%s today"
+msgstr "%s היום"
+
+msgid "Caught most by"
+msgstr "נתפסו בעיקר על ידי"
+
+msgid "Most targeted form"
+msgstr "הטופס הכי מותקף"
+
+msgid "Last blocked"
+msgstr "החסימה האחרונה"
+
+msgid "%s ago"
+msgstr "לפני %s"
+
+msgid "Nothing blocked in the last 30 days. Your forms are quiet."
+msgstr "שום דבר לא נחסם ב-30 הימים האחרונים. הטפסים שלכם שקטים."
+
+msgid "No protection layer is switched on yet."
+msgstr "עדיין לא הופעלה אף שכבת הגנה."
+
+msgid "Logging is off, so there is nothing to break down here. Blocking itself is unaffected."
+msgstr "הרישום כבוי, ולכן אין כאן מה לפרט. החסימה עצמה לא מושפעת."
+
+msgid "Turn on logging"
+msgstr "הפעלת רישום"
+
+msgid "Open the log"
+msgstr "פתיחת היומן"
+
+msgid "Set up protection"
+msgstr "הגדרת הגנה"
+
+msgid "View log"
+msgstr "צפייה ביומן"
+
+msgid "Blocked submissions per day over the last 30 days"
+msgstr "שליחות שנחסמו ליום ב-30 הימים האחרונים"
+
+msgid "Unknown"
+msgstr "לא ידוע"
+
+msgid "Honeypot"
+msgstr "מלכודת"
+
+msgid "Verification Key"
+msgstr "מפתח אימות"
+
+msgid "InputGate"
+msgstr "‏InputGate"
+
+msgid "Text rules"
+msgstr "כללי טקסט"
+
+msgid "Email rules"
+msgstr "כללי אימייל"
+
+msgid "URL rules"
+msgstr "כללי כתובות"
+
+msgid "Country rules"
+msgstr "כללי מדינה"
+
+msgid "IP blocklist"
+msgstr "רשימת חסימת IP"
+
+msgid "IP reputation"
+msgstr "מוניטין IP"
+
+msgid "Phone format"
+msgstr "פורמט טלפון"
+
+msgid "Link limit"
+msgstr "מגבלת קישורים"
+
+msgid "Language required"
+msgstr "שפה נדרשת"
+
+msgid "Language forbidden"
+msgstr "שפה אסורה"
+
+msgid "Length limit"
+msgstr "מגבלת אורך"
+
+msgid "Protection"
+msgstr "הגנה"
+
+msgid "Emoji"
+msgstr "אימוג'י"
+
+msgid "%s protection layer active"
+msgid_plural "%s protection layers active"
+msgstr[0] "שכבת הגנה אחת פעילה"
+msgstr[1] "%s שכבות הגנה פעילות"

@@ -278,6 +278,7 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 = 3.0.4 =
 
+* Added a Dashboard widget: what was blocked over the last 30 days, which layer caught most of it, which form was targeted, and how long ago.
 * Improved compatibility with Fluent Forms, including AJAX submissions.
 * Improved compatibility with Ninja Forms, Contact Form 7, and Elementor Atomic.
 * Improved the spam log with clearer blocking reasons, submitted values, and matched rules.

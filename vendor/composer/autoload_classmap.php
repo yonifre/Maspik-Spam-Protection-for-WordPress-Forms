@@ -8,6 +8,7 @@ $baseDir = dirname($vendorDir);
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'Maspik\\Admin\\AdminProvider' => $baseDir . '/src/Admin/AdminProvider.php',
+    'Maspik\\Admin\\DashboardWidget' => $baseDir . '/src/Admin/DashboardWidget.php',
     'Maspik\\Admin\\FullModeNudge' => $baseDir . '/src/Admin/FullModeNudge.php',
     'Maspik\\Admin\\Menu' => $baseDir . '/src/Admin/Menu.php',
     'Maspik\\Admin\\NoticeFilter' => $baseDir . '/src/Admin/NoticeFilter.php',

@@ -35,3 +35,107 @@ msgstr "تفعيل الحماية الكاملة"
 
 msgid "See settings"
 msgstr "عرض الإعدادات"
+
+msgid "Maspik – Spam protection"
+msgstr "Maspik – الحماية من السبام"
+
+msgid "blocked in the last 30 days"
+msgstr "محظورة خلال آخر 30 يوماً"
+
+msgid "blocked in total"
+msgstr "محظورة إجمالاً"
+
+msgid "%s today"
+msgstr "%s اليوم"
+
+msgid "Caught most by"
+msgstr "اكتُشفت غالباً بواسطة"
+
+msgid "Most targeted form"
+msgstr "النموذج الأكثر استهدافاً"
+
+msgid "Last blocked"
+msgstr "آخر حظر"
+
+msgid "%s ago"
+msgstr "قبل %s"
+
+msgid "Nothing blocked in the last 30 days. Your forms are quiet."
+msgstr "لم يتم حظر أي شيء خلال آخر 30 يوماً. نماذجك هادئة."
+
+msgid "No protection layer is switched on yet."
+msgstr "لم يتم تفعيل أي طبقة حماية بعد."
+
+msgid "Logging is off, so there is nothing to break down here. Blocking itself is unaffected."
+msgstr "التسجيل معطّل، لذا لا يوجد ما يمكن تفصيله هنا. الحظر نفسه لا يتأثر."
+
+msgid "Turn on logging"
+msgstr "تفعيل التسجيل"
+
+msgid "Open the log"
+msgstr "فتح السجل"
+
+msgid "Set up protection"
+msgstr "إعداد الحماية"
+
+msgid "View log"
+msgstr "عرض السجل"
+
+msgid "Blocked submissions per day over the last 30 days"
+msgstr "الإرسالات المحظورة يومياً خلال آخر 30 يوماً"
+
+msgid "Unknown"
+msgstr "غير معروف"
+
+msgid "Honeypot"
+msgstr "المصيدة"
+
+msgid "Verification Key"
+msgstr "مفتاح التحقق"
+
+msgid "InputGate"
+msgstr "‏InputGate"
+
+msgid "Text rules"
+msgstr "قواعد النص"
+
+msgid "Email rules"
+msgstr "قواعد البريد"
+
+msgid "URL rules"
+msgstr "قواعد الروابط"
+
+msgid "Country rules"
+msgstr "قواعد الدول"
+
+msgid "IP blocklist"
+msgstr "قائمة حظر IP"
+
+msgid "IP reputation"
+msgstr "سمعة IP"
+
+msgid "Phone format"
+msgstr "تنسيق الهاتف"
+
+msgid "Link limit"
+msgstr "حد الروابط"
+
+msgid "Language required"
+msgstr "اللغة المطلوبة"
+
+msgid "Language forbidden"
+msgstr "اللغة الممنوعة"
+
+msgid "Length limit"
+msgstr "حد الطول"
+
+msgid "Protection"
+msgstr "الحماية"
+
+msgid "Emoji"
+msgstr "رموز تعبيرية"
+
+msgid "%s protection layer active"
+msgid_plural "%s protection layers active"
+msgstr[0] "طبقة حماية واحدة مفعّلة"
+msgstr[1] "%s طبقات حماية مفعّلة"

@@ -9,6 +9,7 @@ use Maspik\Admin\Rest\IntegrationsController;
 use Maspik\Admin\Rest\LicenseController;
 use Maspik\Admin\Rest\LogsController;
 use Maspik\Admin\Rest\PlaygroundController;
+use Maspik\Admin\DashboardWidget;
 use Maspik\Admin\Rest\RuleTesterController;
 use Maspik\Admin\Rest\SettingsController;
 use Maspik\Admin\Rest\StatsController;
@@ -58,6 +59,11 @@ final class AdminProvider implements ServiceProvider
             $c->get(ProGate::class)
         ));
         $c->set(RuleTesterController::class, static fn () => new RuleTesterController($c->get(Settings::class)));
+        $c->set(DashboardWidget::class, static fn (Container $c) => new DashboardWidget(
+            $c->get(LogRepository::class),
+            $c->get(Settings::class),
+            $c->get(CheckFactory::class)
+        ));
         $c->set(DashboardController::class, static fn (Container $c) => new DashboardController(
             $c->get(Settings::class),
             $c->get(ProGate::class)
@@ -77,6 +83,11 @@ final class AdminProvider implements ServiceProvider
     {
         add_action('admin_menu', static function () use ($c): void {
             $c->get(Menu::class)->register();
+        });
+
+        // Only fires on index.php, so nothing here is built on other screens.
+        add_action('wp_dashboard_setup', static function () use ($c): void {
+            $c->get(DashboardWidget::class)->register();
         });
 
         // Keep other plugins' promo/upsell notices off MASPIK's own pages.

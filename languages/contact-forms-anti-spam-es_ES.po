@@ -35,3 +35,107 @@ msgstr "Activar la Protección Completa"
 
 msgid "See settings"
 msgstr "Ver ajustes"
+
+msgid "Maspik – Spam protection"
+msgstr "Maspik – Protección antispam"
+
+msgid "blocked in the last 30 days"
+msgstr "bloqueados en los últimos 30 días"
+
+msgid "blocked in total"
+msgstr "bloqueados en total"
+
+msgid "%s today"
+msgstr "%s hoy"
+
+msgid "Caught most by"
+msgstr "Detectados sobre todo por"
+
+msgid "Most targeted form"
+msgstr "Formulario más atacado"
+
+msgid "Last blocked"
+msgstr "Último bloqueo"
+
+msgid "%s ago"
+msgstr "hace %s"
+
+msgid "Nothing blocked in the last 30 days. Your forms are quiet."
+msgstr "No se ha bloqueado nada en los últimos 30 días. Tus formularios están tranquilos."
+
+msgid "No protection layer is switched on yet."
+msgstr "Todavía no hay ninguna capa de protección activada."
+
+msgid "Logging is off, so there is nothing to break down here. Blocking itself is unaffected."
+msgstr "El registro está desactivado, así que no hay nada que desglosar aquí. El bloqueo no se ve afectado."
+
+msgid "Turn on logging"
+msgstr "Activar el registro"
+
+msgid "Open the log"
+msgstr "Abrir el registro"
+
+msgid "Set up protection"
+msgstr "Configurar la protección"
+
+msgid "View log"
+msgstr "Ver registro"
+
+msgid "Blocked submissions per day over the last 30 days"
+msgstr "Envíos bloqueados por día en los últimos 30 días"
+
+msgid "Unknown"
+msgstr "Desconocido"
+
+msgid "Honeypot"
+msgstr "Honeypot"
+
+msgid "Verification Key"
+msgstr "Clave de verificación"
+
+msgid "InputGate"
+msgstr "InputGate"
+
+msgid "Text rules"
+msgstr "Reglas de texto"
+
+msgid "Email rules"
+msgstr "Reglas de correo"
+
+msgid "URL rules"
+msgstr "Reglas de URL"
+
+msgid "Country rules"
+msgstr "Reglas de país"
+
+msgid "IP blocklist"
+msgstr "Lista de IP bloqueadas"
+
+msgid "IP reputation"
+msgstr "Reputación de IP"
+
+msgid "Phone format"
+msgstr "Formato de teléfono"
+
+msgid "Link limit"
+msgstr "Límite de enlaces"
+
+msgid "Language required"
+msgstr "Idioma requerido"
+
+msgid "Language forbidden"
+msgstr "Idioma prohibido"
+
+msgid "Length limit"
+msgstr "Límite de longitud"
+
+msgid "Protection"
+msgstr "Protección"
+
+msgid "Emoji"
+msgstr "Emojis"
+
+msgid "%s protection layer active"
+msgid_plural "%s protection layers active"
+msgstr[0] "%s capa de protección activa"
+msgstr[1] "%s capas de protección activas"

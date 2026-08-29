@@ -35,3 +35,107 @@ msgstr "Vollständigen Schutz aktivieren"
 
 msgid "See settings"
 msgstr "Einstellungen ansehen"
+
+msgid "Maspik – Spam protection"
+msgstr "Maspik – Spamschutz"
+
+msgid "blocked in the last 30 days"
+msgstr "in den letzten 30 Tagen blockiert"
+
+msgid "blocked in total"
+msgstr "insgesamt blockiert"
+
+msgid "%s today"
+msgstr "%s heute"
+
+msgid "Caught most by"
+msgstr "Am häufigsten erkannt von"
+
+msgid "Most targeted form"
+msgstr "Am häufigsten angegriffenes Formular"
+
+msgid "Last blocked"
+msgstr "Zuletzt blockiert"
+
+msgid "%s ago"
+msgstr "vor %s"
+
+msgid "Nothing blocked in the last 30 days. Your forms are quiet."
+msgstr "In den letzten 30 Tagen wurde nichts blockiert. Deine Formulare sind ruhig."
+
+msgid "No protection layer is switched on yet."
+msgstr "Es ist noch keine Schutzebene aktiviert."
+
+msgid "Logging is off, so there is nothing to break down here. Blocking itself is unaffected."
+msgstr "Die Protokollierung ist aus, daher gibt es hier nichts aufzuschlüsseln. Das Blockieren ist davon nicht betroffen."
+
+msgid "Turn on logging"
+msgstr "Protokollierung einschalten"
+
+msgid "Open the log"
+msgstr "Protokoll öffnen"
+
+msgid "Set up protection"
+msgstr "Schutz einrichten"
+
+msgid "View log"
+msgstr "Protokoll ansehen"
+
+msgid "Blocked submissions per day over the last 30 days"
+msgstr "Blockierte Übermittlungen pro Tag in den letzten 30 Tagen"
+
+msgid "Unknown"
+msgstr "Unbekannt"
+
+msgid "Honeypot"
+msgstr "Honeypot"
+
+msgid "Verification Key"
+msgstr "Verifizierungsschlüssel"
+
+msgid "InputGate"
+msgstr "InputGate"
+
+msgid "Text rules"
+msgstr "Textregeln"
+
+msgid "Email rules"
+msgstr "E-Mail-Regeln"
+
+msgid "URL rules"
+msgstr "URL-Regeln"
+
+msgid "Country rules"
+msgstr "Länderregeln"
+
+msgid "IP blocklist"
+msgstr "IP-Sperrliste"
+
+msgid "IP reputation"
+msgstr "IP-Reputation"
+
+msgid "Phone format"
+msgstr "Telefonformat"
+
+msgid "Link limit"
+msgstr "Link-Limit"
+
+msgid "Language required"
+msgstr "Sprache erforderlich"
+
+msgid "Language forbidden"
+msgstr "Sprache verboten"
+
+msgid "Length limit"
+msgstr "Längenbegrenzung"
+
+msgid "Protection"
+msgstr "Schutz"
+
+msgid "Emoji"
+msgstr "Emojis"
+
+msgid "%s protection layer active"
+msgid_plural "%s protection layers active"
+msgstr[0] "%s Schutzebene aktiv"
+msgstr[1] "%s Schutzebenen aktiv"
