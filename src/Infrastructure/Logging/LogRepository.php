@@ -371,6 +371,50 @@ final class LogRepository
     }
 
     /**
+     * The most frequent values of one column within a window, largest first.
+     *
+     * The widget's headline counts the last 30 days, so its breakdowns have to
+     * count the same 30 days or the percentages describe a total that is not on
+     * screen. countsByType() and countsBySource() are lifetime figures — right
+     * for Analytics, wrong next to a 30-day number — so this is a separate,
+     * windowed query rather than a change to them.
+     *
+     * The column is whitelisted rather than escaped: an identifier cannot be
+     * bound as a parameter, and a whitelist is the only way to be certain a
+     * caller can never reach the SQL.
+     *
+     * @param string $column 'spam_type' | 'spam_source' | 'spam_value'
+     * @return array<int, array{label: string, count: int}>
+     */
+    public function topWithin(string $column, int $days = 30, int $limit = 5): array
+    {
+        global $wpdb;
+
+        $allowed = ['spam_type', 'spam_source', 'spam_value'];
+        if (! in_array($column, $allowed, true)) {
+            return [];
+        }
+
+        $since = gmdate('Y-m-d', time() - $days * DAY_IN_SECONDS);
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT $column AS label, COUNT(*) AS count
+             FROM {$wpdb->prefix}maspik_spam_logs
+             WHERE spam_tag <> 'clean' AND SUBSTR(spam_date, 1, 10) >= %s AND $column <> ''
+             GROUP BY $column ORDER BY count DESC, label ASC LIMIT %d",
+            $since,
+            $limit
+        ), ARRAY_A);
+
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        return array_map(static function (array $row): array {
+            return ['label' => (string) $row['label'], 'count' => (int) $row['count']];
+        }, $rows);
+    }
+
+    /**
      * Daily counts for the last N days. spam_date is a varchar holding
      * current_time('mysql') — SUBSTR(…,1,10) yields the Y-m-d day (v2 schema,
      * unchanged; a real datetime column is the logged schema-v2 backlog item).

@@ -151,3 +151,12 @@ msgstr "Activer InputGate"
 
 msgid "Learn more"
 msgstr "En savoir plus"
+
+msgid "Blocked by layer"
+msgstr "Bloqué par couche"
+
+msgid "Most caught values"
+msgstr "Valeurs les plus détectées"
+
+msgid "%s a day"
+msgstr "%s par jour"

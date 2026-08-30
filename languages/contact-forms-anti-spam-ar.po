@@ -151,3 +151,12 @@ msgstr "تفعيل InputGate"
 
 msgid "Learn more"
 msgstr "اعرف المزيد"
+
+msgid "Blocked by layer"
+msgstr "الحظر حسب الطبقة"
+
+msgid "Most caught values"
+msgstr "القيم الأكثر رصداً"
+
+msgid "%s a day"
+msgstr "%s يومياً"

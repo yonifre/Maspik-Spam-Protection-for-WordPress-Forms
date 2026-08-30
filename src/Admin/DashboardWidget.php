@@ -25,6 +25,9 @@ final class DashboardWidget
     private const WIDGET_ID = 'maspik_at_a_glance';
     private const DAYS = 30;
 
+    /** How many rows each ranked list shows. */
+    private const TOP = 5;
+
     /** @var LogRepository */
     private $logs;
 
@@ -97,7 +100,7 @@ final class DashboardWidget
                 $layers > 0 ? __('Open the log', 'contact-forms-anti-spam') : __('Set up protection', 'contact-forms-anti-spam')
             );
         } else {
-            $this->breakdown();
+            $this->breakdown($blocked);
         }
 
         $this->inputGate();
@@ -158,6 +161,19 @@ final class DashboardWidget
             esc_html(_n('%s protection layer active', '%s protection layers active', $layers, 'contact-forms-anti-spam')),
             '<strong>' . esc_html(number_format_i18n($layers)) . '</strong>'
         );
+        if ($mode !== 'none' && $blocked > 0) {
+            // On the status line rather than under the number: appended to the
+            // caption it pushed "blocked in the last 30 days" onto two lines in
+            // a narrow column, and it belongs with the other secondary facts.
+            // One decimal, because "3" hides the difference between a trickle
+            // and a steady stream.
+            echo ' <span class="mkw-sep">·</span> ';
+            printf(
+                /* translators: %s: average number of submissions blocked per day */
+                esc_html__('%s a day', 'contact-forms-anti-spam'),
+                '<strong>' . esc_html(number_format_i18n($blocked / self::DAYS, 1)) . '</strong>'
+            );
+        }
         if ($mode !== 'none' && $today > 0) {
             echo ' <span class="mkw-sep">·</span> ';
             printf(
@@ -170,25 +186,25 @@ final class DashboardWidget
     }
 
     /** The two things worth knowing after "how many": which rule, and which form. */
-    private function breakdown(): void
+    private function breakdown(int $blocked): void
     {
-        $types = $this->logs->countsByType();
-        $sources = $this->logs->countsBySource();
+        $types = $this->logs->topWithin('spam_type', self::DAYS, self::TOP);
+        $values = $this->logs->topWithin('spam_value', self::DAYS, self::TOP);
+        $sources = $this->logs->topWithin('spam_source', self::DAYS, self::TOP);
         $last = $this->logs->lastBlocked();
+
+        // Which layer did the work, and which of your rules did. v2 answered
+        // both with a pie chart and a ten-row table; five ranked bars say the
+        // same thing in a glance and need no charting library to draw.
+        $this->bars(__('Blocked by layer', 'contact-forms-anti-spam'), $types, $blocked, true);
+        $this->bars(__('Most caught values', 'contact-forms-anti-spam'), $values, $blocked, false);
 
         echo '<ul class="mkw-facts">';
 
-        if (isset($types[0]['type'])) {
-            $this->fact(
-                __('Caught most by', 'contact-forms-anti-spam'),
-                self::checkName((string) $types[0]['type']),
-                (int) $types[0]['count']
-            );
-        }
-        if (isset($sources[0]['source'])) {
+        if (isset($sources[0]['label'])) {
             $this->fact(
                 __('Most targeted form', 'contact-forms-anti-spam'),
-                (string) $sources[0]['source'],
+                (string) $sources[0]['label'],
                 (int) $sources[0]['count']
             );
         }
@@ -284,6 +300,55 @@ final class DashboardWidget
         echo '<a class="mkw-gate__learn" href="' . esc_url(FullModeNudge::LEARN_MORE_URL) . '" target="_blank" rel="noopener noreferrer">'
             . esc_html__('Learn more', 'contact-forms-anti-spam') . '</a>';
         echo '</p></div>';
+    }
+
+    /**
+     * A ranked list with a proportion bar per row.
+     *
+     * The bar is scaled to the largest row, not to the total, because the
+     * question these answer is "which of these dominates" — against the total,
+     * a spread of five similar causes renders as five identical stubs. The
+     * percentage next to it is of the total, so the absolute share is still
+     * there to read.
+     *
+     * @param array<int, array{label: string, count: int}> $rows
+     * @param bool $asCheckName true when the labels are check ids
+     */
+    private function bars(string $title, array $rows, int $total, bool $asCheckName): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $max = 0;
+        foreach ($rows as $row) {
+            $max = max($max, (int) $row['count']);
+        }
+        if ($max <= 0) {
+            return;
+        }
+
+        echo '<div class="mkw-rank"><h4 class="mkw-rank__title">' . esc_html($title) . '</h4>';
+        foreach ($rows as $row) {
+            $count = (int) $row['count'];
+            $label = $asCheckName ? self::checkName((string) $row['label']) : (string) $row['label'];
+            // A blocked value can be a whole spam paragraph; the row is a label,
+            // not the evidence, and the log itself holds the full text.
+            if (mb_strlen($label) > 32) {
+                $label = mb_substr($label, 0, 32) . '…';
+            }
+            $share = $total > 0 ? round($count / $total * 100) : 0;
+            $width = round($count / $max * 100);
+
+            echo '<div class="mkw-rank__row">';
+            echo '<span class="mkw-rank__label" title="' . esc_attr($asCheckName ? self::checkName((string) $row['label']) : (string) $row['label']) . '">'
+                . esc_html($label) . '</span>';
+            echo '<span class="mkw-rank__bar"><span style="width:' . esc_attr((string) $width) . '%"></span></span>';
+            echo '<span class="mkw-rank__count">' . esc_html(number_format_i18n($count)) . '</span>';
+            echo '<span class="mkw-rank__pct">' . esc_html(sprintf('%d%%', $share)) . '</span>';
+            echo '</div>';
+        }
+        echo '</div>';
     }
 
     private function fact(string $label, string $value, ?int $count): void
@@ -384,6 +449,16 @@ final class DashboardWidget
 .mkw-status{margin:12px 0 0;color:#646970;font-size:13px}
 .mkw-status strong{color:#1d2327}
 .mkw-sep{color:#c3c4c7}
+.mkw-rank{margin:14px 0 0;padding:12px 0 0;border-top:1px solid #f0f0f1}
+.mkw-rank__title{margin:0 0 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:#646970}
+/* The bar is the flexible column, not the label: it is the part being
+   compared, so it should get the room a wider widget provides. */
+.mkw-rank__row{display:grid;grid-template-columns:minmax(0,7.5rem) minmax(24px,1fr) 2.1rem 2.1rem;align-items:center;gap:8px;padding:3px 0;font-size:13px}
+.mkw-rank__label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mkw-rank__bar{background:#f0f0f1;border-radius:3px;height:7px;overflow:hidden;min-width:0}
+.mkw-rank__bar>span{display:block;height:100%;background:#d63638;border-radius:2px}
+.mkw-rank__count{text-align:right;font-variant-numeric:tabular-nums}
+.mkw-rank__pct{text-align:right;color:#646970;font-variant-numeric:tabular-nums;font-size:12px}
 .mkw-facts{margin:12px 0 0;padding:12px 0 0;border-top:1px solid #f0f0f1;list-style:none}
 .mkw-fact{display:flex;justify-content:space-between;gap:12px;padding:4px 0;font-size:13px}
 .mkw-fact__label{color:#646970;flex-shrink:0}

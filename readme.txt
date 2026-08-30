@@ -278,7 +278,7 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 = 3.0.4 =
 
-* Added a Dashboard widget: what was blocked over the last 30 days, which layer caught most of it, which form was targeted, and how long ago.
+* Added a Dashboard widget: how much was blocked over the last 30 days and per day, the top five layers and the top five caught values with their share, the most targeted form, and when the last block happened.
 * The Dashboard widget points out when InputGate is off, or limited to checking the IP only, with a one-click way to switch on full protection.
 * Improved compatibility with Fluent Forms, including AJAX submissions.
 * Improved compatibility with Ninja Forms, Contact Form 7, and Elementor Atomic.
