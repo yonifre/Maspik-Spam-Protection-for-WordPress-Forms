@@ -14,6 +14,11 @@ use Maspik\Integrations\Support\FieldMapper;
 use Maspik\Integrations\Support\RawPayload;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * WooCommerce Checkout (Orders) spam check — Pro only, OFF by default.
  * Hook: woocommerce_after_checkout_validation ($data, $errors). Block by

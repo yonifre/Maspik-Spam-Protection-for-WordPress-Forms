@@ -8,6 +8,11 @@ use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Kernel\Container;
 use Maspik\Kernel\ServiceProvider;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 final class FrontendProvider implements ServiceProvider
 {
     public function register(Container $c): void

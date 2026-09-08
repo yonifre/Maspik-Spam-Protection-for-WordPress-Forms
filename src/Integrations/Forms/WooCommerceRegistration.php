@@ -11,6 +11,11 @@ use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * WooCommerce account registration adapter — Pro only, on by default when Woo
  * is active. Filter: woocommerce_registration_errors ($errors, $username,

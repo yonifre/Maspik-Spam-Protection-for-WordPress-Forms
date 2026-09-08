@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Kernel;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Minimal lazy service container. Intentionally not PSR-11 and not autowired:
  * every service is registered explicitly in a ServiceProvider, so the full

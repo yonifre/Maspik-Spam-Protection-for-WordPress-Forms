@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Model;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The five field types the v2.9.x engine distinguishes. Adapters map each
  * form plugin's own type names onto these constants.

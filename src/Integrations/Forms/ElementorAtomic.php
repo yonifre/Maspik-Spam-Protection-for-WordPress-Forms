@@ -9,8 +9,14 @@ use Maspik\Domain\Check\HoneypotCheck;
 use Maspik\Domain\Check\VerificationKeyCheck;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Infrastructure\Matrix\DirectPostSignal;
+use Maspik\Infrastructure\Signals\ObservedSignals;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * Elementor Pro Atomic Forms adapter — the Elementor 4+ "e-form" engine that
@@ -30,6 +36,7 @@ final class ElementorAtomic extends AbstractFormIntegration
     /** Atomic interaction ids for the injected guard pseudo-fields (JS parity). */
     public const HP_ID = 'maspik_atomic_hp';
     public const KEY_ID = 'maspik_atomic_sk';
+    public const SIGNALS_ID = 'maspik_atomic_sg';
 
     /** Atomic field type => FieldType (same set as classic Elementor). */
     public static function typeMap(): array
@@ -82,6 +89,7 @@ final class ElementorAtomic extends AbstractFormIntegration
             $raw = [];
             $honeypot = '';
             $key = '';
+            $signals = '';
             foreach ($formFields as $field) {
                 if (! is_array($field) || ! isset($field['id'])) {
                     continue;
@@ -97,12 +105,17 @@ final class ElementorAtomic extends AbstractFormIntegration
                     $key = $value;
                     continue;
                 }
+                if ($fieldId === self::SIGNALS_ID) {
+                    $signals = $value;
+                    continue;
+                }
                 $raw[] = ['name' => $fieldId, 'type' => (string) ($field['type'] ?? 'text'), 'value' => $value];
             }
 
             $hidden = [
                 HoneypotCheck::FIELD_NAME => $honeypot,
                 VerificationKeyCheck::FIELD_NAME => $key,
+                ObservedSignals::FIELD_NAME => $signals,
             ];
 
             // Direct-POST evidence (weaker than classic Elementor: Atomic posts

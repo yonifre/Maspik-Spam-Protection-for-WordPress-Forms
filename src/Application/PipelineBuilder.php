@@ -20,6 +20,11 @@ use Maspik\Domain\Check\TextBlacklistCheck;
 use Maspik\Domain\Check\UrlBlacklistCheck;
 use Maspik\Domain\Model\FieldType;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Assembles a CheckPipeline from an EngineConfig. Pure (no WordPress) so it is
  * fully exercised by the parity harness.

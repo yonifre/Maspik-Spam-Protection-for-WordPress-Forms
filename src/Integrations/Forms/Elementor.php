@@ -10,6 +10,11 @@ use Maspik\Infrastructure\Matrix\DirectPostSignal;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Elementor Pro Forms adapter.
  * Hook: elementor_pro/forms/validation ($record, $ajax_handler).

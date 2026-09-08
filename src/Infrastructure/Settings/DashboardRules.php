@@ -6,6 +6,11 @@ namespace Maspik\Infrastructure\Settings;
 
 use Maspik\Domain\Check\LanguageCheck;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Normalises the shared-rules payload (from wpmaspik.com, or an existing v2
  * `spamapi` option) into the shape the engine reads: local Schema keys, with

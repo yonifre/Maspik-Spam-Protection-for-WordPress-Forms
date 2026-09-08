@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Check\Support;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * String-matching primitives ported verbatim from v2.9.x
  * (maspik_is_field_value_exist_in_string, efas wildcard handling).

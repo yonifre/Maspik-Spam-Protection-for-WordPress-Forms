@@ -6,6 +6,11 @@ namespace Maspik\Infrastructure\Matrix;
 
 use Maspik\Domain\Model\Submission;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * "Direct POST attack" signal (v2's NeedPageurl / "Elementor Bot detector").
  *
@@ -45,6 +50,10 @@ final class DirectPostSignal
     public const CF7 = 7;
     public const GRAVITY_FORMS = 6;
     public const WP_COMMENTS = 5;
+    // Weakest of the set: a SureForms submission carries a form id, but that is
+    // a single value and easy to replay, so its absence says less than a
+    // missing Elementor referrer does.
+    public const SUREFORMS = 4;
 
     /** @var int 1 = no suspicion (default) … 9 = high */
     private static $floor = 1;

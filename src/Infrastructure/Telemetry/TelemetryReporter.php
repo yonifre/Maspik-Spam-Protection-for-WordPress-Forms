@@ -6,6 +6,11 @@ namespace Maspik\Infrastructure\Telemetry;
 
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Sends the telemetry payload, weekly, and only when the site has opted in.
  *

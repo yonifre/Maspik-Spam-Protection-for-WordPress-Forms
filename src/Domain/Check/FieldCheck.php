@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * A check that looks at a single normalized field value.
  */

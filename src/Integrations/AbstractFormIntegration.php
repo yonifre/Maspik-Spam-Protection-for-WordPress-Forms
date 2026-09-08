@@ -10,7 +10,13 @@ use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\Submission;
 use Maspik\Integrations\Support\RawPayload;
 use Maspik\Infrastructure\ClientIp;
+use Maspik\Infrastructure\Signals\ObservedSignals;
 use Maspik\Integrations\Support\FieldMapper;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * Shared plumbing for form adapters. A concrete adapter only has to:
@@ -44,6 +50,11 @@ abstract class AbstractFormIntegration implements FormIntegration
         return false;
     }
 
+    public function needsVerification(): bool
+    {
+        return false;
+    }
+
     /**
      * Build a Submission from raw plugin fields + a plugin type map.
      *
@@ -52,7 +63,14 @@ abstract class AbstractFormIntegration implements FormIntegration
      */
     protected function submissionFrom(array $rawFields, array $typeMap): Submission
     {
-        return $this->submission(FieldMapper::map($rawFields, $typeMap));
+        // Off by default: switching it on makes fields that were previously
+        // dropped start being scanned, which on a site with an aggressive
+        // blocklist can begin refusing submissions that used to pass. The
+        // record of unknown types is kept either way, so a site learns what its
+        // adapter is missing without changing what it blocks.
+        $infer = (bool) apply_filters('maspik/infer_unknown_field_types', false, $this->id());
+
+        return $this->submission(FieldMapper::map($rawFields, $typeMap, $infer, $this->id()));
     }
 
     /**
@@ -73,6 +91,11 @@ abstract class AbstractFormIntegration implements FormIntegration
         $hidden = [
             HoneypotCheck::FIELD_NAME => RawPayload::findField($post, HoneypotCheck::FIELD_NAME),
             VerificationKeyCheck::FIELD_NAME => RawPayload::findField($post, VerificationKeyCheck::FIELD_NAME),
+            // Searched for the same way and for the same reason: the guard
+            // script writes it as an ordinary input, but a plugin that batches
+            // its fields into one serialised value puts it somewhere $_POST
+            // does not show it under its own name.
+            ObservedSignals::FIELD_NAME => RawPayload::findField($post, ObservedSignals::FIELD_NAME),
         ];
 
         return $this->submissionWithHidden($fields, $hidden);

@@ -16,7 +16,13 @@ use Maspik\Integrations\Forms\CustomForm;
 use Maspik\Integrations\Forms\Divi;
 use Maspik\Integrations\Forms\Elementor;
 use Maspik\Integrations\Forms\ElementorAtomic;
+use Maspik\Integrations\Forms\AffiliateWP;
+use Maspik\Integrations\Forms\EasyDigitalDownloads;
 use Maspik\Integrations\Forms\EverestForms;
+use Maspik\Integrations\Forms\FunnelKit;
+use Maspik\Integrations\Forms\MemberPress;
+use Maspik\Integrations\Forms\SureForms;
+use Maspik\Integrations\Forms\WSForm;
 use Maspik\Integrations\Forms\FluentForms;
 use Maspik\Integrations\Forms\Formidable;
 use Maspik\Integrations\Forms\Forminator;
@@ -33,6 +39,11 @@ use Maspik\Integrations\Forms\WpForms;
 use Maspik\Kernel\Container;
 use Maspik\Kernel\ServiceProvider;
 use Maspik\Premium\ProGate;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 final class IntegrationsProvider implements ServiceProvider
 {
@@ -59,6 +70,12 @@ final class IntegrationsProvider implements ServiceProvider
             $registry->add(new NinjaForms($ip));
             $registry->add(new FluentForms($ip));
             $registry->add(new EverestForms($ip));
+            $registry->add(new SureForms($ip));
+            $registry->add(new MemberPress($ip));
+            $registry->add(new AffiliateWP($ip));
+            $registry->add(new EasyDigitalDownloads($ip));
+            $registry->add(new FunnelKit($ip));
+            $registry->add(new WSForm($ip));
             $registry->add(new Bricks($ip));
             $registry->add(new Breakdance($ip));
             $registry->add(new BitForm($ip));
@@ -84,6 +101,20 @@ final class IntegrationsProvider implements ServiceProvider
 
     public function boot(Container $c): void
     {
+        // Priority 0, not the default 10.
+        //
+        // An integration can only intercept a submission if its hooks are
+        // attached before the other plugin processes the request, and some
+        // plugins process on `init` themselves: AffiliateWP dispatches its
+        // registration form at `init` priority 9, one step ahead of the
+        // default. Registering at 10 meant its hook had already run and the
+        // adapter never saw a single signup — a whole integration silently
+        // dead, with nothing anywhere to say so.
+        //
+        // Nothing here needs `init` to have progressed: availability is decided
+        // by constants and classes the other plugin defines when it loads, well
+        // before this point. Attaching earlier is only ever safer, because a
+        // hook added before it fires still fires.
         add_action('init', static function () use ($c): void {
             $registry = $c->get(Registry::class);
 
@@ -91,6 +122,6 @@ final class IntegrationsProvider implements ServiceProvider
             do_action('maspik/register_integrations', $registry);
 
             $registry->activateEnabled();
-        });
+        }, 0);
     }
 }

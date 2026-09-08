@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Infrastructure\Matrix\DirectPostSignal;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Contact Form 7 adapter — the reference implementation.
  * Hook: wpcf7_validate ($result, $tags). Reject: $result->invalidate(tag, msg).

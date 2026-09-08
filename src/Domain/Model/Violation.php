@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Model;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * A single failed check. Field names mirror what v2.9.x carried in its loose
  * result arrays so logs and custom error messages stay compatible:

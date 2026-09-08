@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Admin;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Keeps MASPIK's own admin pages free of every notice that is not ours.
  *

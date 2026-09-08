@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Ninja Forms adapter.
  * Hook: ninja_forms_submit_data ($form_data). Fields: $form_data['fields'],

@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Honeypot: the injected hidden field must stay empty.
  * Field name and reason string are frozen v2 contract (cached pages!).

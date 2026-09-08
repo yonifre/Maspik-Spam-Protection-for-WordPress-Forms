@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Country / continent allow- or block-list (Pro).
  *

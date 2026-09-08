@@ -6,6 +6,11 @@ namespace Maspik\Admin;
 
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Invitation to move Maspik Matrix from IP-only checking to the full check.
  *

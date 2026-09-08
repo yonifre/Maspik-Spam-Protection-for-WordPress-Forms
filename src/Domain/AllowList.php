@@ -8,6 +8,11 @@ use Maspik\Domain\Check\Support\CidrMatcher;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Domain\Model\Submission;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * User-curated allow list, populated from the Logs "Not spam" / "Whitelist"
  * actions. Checked BEFORE the pipeline: a match short-circuits the whole

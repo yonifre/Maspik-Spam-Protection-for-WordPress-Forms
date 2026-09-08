@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Knows every integration, activates the ones that are installed and enabled.
  */
@@ -79,7 +84,7 @@ final class Registry
      * plugins are still listed (so users know what MASPIK can protect) with
      * available=false.
      *
-     * @return array<int, array{id: string, label: string, toggleKey: string, available: bool, enabled: bool, pro: bool, locked: bool}>
+     * @return array<int, array{id: string, label: string, toggleKey: string, available: bool, enabled: bool, pro: bool, locked: bool, optIn: bool, verify: bool}>
      */
     public function describe(): array
     {
@@ -96,6 +101,13 @@ final class Registry
                 'pro' => $pro,
                 // Detected but inert until upgraded — the UI shows it locked.
                 'locked' => $pro && ! $proActive,
+                // Off until switched on deliberately.
+                'optIn' => $integration->optIn(),
+                // Ask the owner to confirm a real submission still completes
+                // after enabling. Declared per adapter rather than inferred
+                // from optIn, so an opt-in integration that has been proven
+                // against a live install does not carry the warning.
+                'verify' => $integration->needsVerification(),
             ];
         }
 

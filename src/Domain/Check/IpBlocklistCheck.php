@@ -8,6 +8,11 @@ use Maspik\Domain\Check\Support\CidrMatcher;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Exact-IP and CIDR blocklist.
  */

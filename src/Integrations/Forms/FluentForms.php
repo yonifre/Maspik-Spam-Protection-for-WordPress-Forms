@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Fluent Forms adapter.
  * Hook: fluentform/validation_errors ($errors, $formData, $form, $fields).

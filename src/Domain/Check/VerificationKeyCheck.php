@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Verification Key (v3 rename of v2's "Advanced Key" / setting id
  * "maspikTimeCheck"): a hidden field added by the front-end script must carry

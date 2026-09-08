@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388
+class ComposerStaticInit85f766dda0e20c4fa01172d52b764ba4
 {
     public static $prefixLengthsPsr4 = array (
         'M' => 
@@ -74,19 +74,25 @@ class ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388
         'Maspik\\Frontend\\FrontendProvider' => __DIR__ . '/../..' . '/src/Frontend/FrontendProvider.php',
         'Maspik\\Frontend\\ScriptInjector' => __DIR__ . '/../..' . '/src/Frontend/ScriptInjector.php',
         'Maspik\\Infrastructure\\ClientIp' => __DIR__ . '/../..' . '/src/Infrastructure/ClientIp.php',
+        'Maspik\\Infrastructure\\Feedback\\FalsePositiveReporter' => __DIR__ . '/../..' . '/src/Infrastructure/Feedback/FalsePositiveReporter.php',
         'Maspik\\Infrastructure\\Geo\\FreeIpApiResolver' => __DIR__ . '/../..' . '/src/Infrastructure/Geo/FreeIpApiResolver.php',
         'Maspik\\Infrastructure\\Logging\\LayerStatus' => __DIR__ . '/../..' . '/src/Infrastructure/Logging/LayerStatus.php',
         'Maspik\\Infrastructure\\Logging\\LogRepository' => __DIR__ . '/../..' . '/src/Infrastructure/Logging/LogRepository.php',
         'Maspik\\Infrastructure\\Matrix\\DirectPostSignal' => __DIR__ . '/../..' . '/src/Infrastructure/Matrix/DirectPostSignal.php',
         'Maspik\\Infrastructure\\Matrix\\MatrixClient' => __DIR__ . '/../..' . '/src/Infrastructure/Matrix/MatrixClient.php',
+        'Maspik\\Infrastructure\\Privacy\\PersonalData' => __DIR__ . '/../..' . '/src/Infrastructure/Privacy/PersonalData.php',
         'Maspik\\Infrastructure\\Reputation\\IpReputationResolver' => __DIR__ . '/../..' . '/src/Infrastructure/Reputation/IpReputationResolver.php',
         'Maspik\\Infrastructure\\Settings\\DashboardRules' => __DIR__ . '/../..' . '/src/Infrastructure/Settings/DashboardRules.php',
         'Maspik\\Infrastructure\\Settings\\Schema' => __DIR__ . '/../..' . '/src/Infrastructure/Settings/Schema.php',
         'Maspik\\Infrastructure\\Settings\\Settings' => __DIR__ . '/../..' . '/src/Infrastructure/Settings/Settings.php',
+        'Maspik\\Infrastructure\\Signals\\ObservedSignals' => __DIR__ . '/../..' . '/src/Infrastructure/Signals/ObservedSignals.php',
+        'Maspik\\Infrastructure\\Signals\\SignalDebugLog' => __DIR__ . '/../..' . '/src/Infrastructure/Signals/SignalDebugLog.php',
+        'Maspik\\Infrastructure\\Signals\\SignalSchema' => __DIR__ . '/../..' . '/src/Infrastructure/Signals/SignalSchema.php',
         'Maspik\\Infrastructure\\Telemetry\\TelemetryCollector' => __DIR__ . '/../..' . '/src/Infrastructure/Telemetry/TelemetryCollector.php',
         'Maspik\\Infrastructure\\Telemetry\\TelemetryReporter' => __DIR__ . '/../..' . '/src/Infrastructure/Telemetry/TelemetryReporter.php',
         'Maspik\\Integrations\\AbstractFormIntegration' => __DIR__ . '/../..' . '/src/Integrations/AbstractFormIntegration.php',
         'Maspik\\Integrations\\FormIntegration' => __DIR__ . '/../..' . '/src/Integrations/FormIntegration.php',
+        'Maspik\\Integrations\\Forms\\AffiliateWP' => __DIR__ . '/../..' . '/src/Integrations/Forms/AffiliateWP.php',
         'Maspik\\Integrations\\Forms\\BitForm' => __DIR__ . '/../..' . '/src/Integrations/Forms/BitForm.php',
         'Maspik\\Integrations\\Forms\\Breakdance' => __DIR__ . '/../..' . '/src/Integrations/Forms/Breakdance.php',
         'Maspik\\Integrations\\Forms\\Bricks' => __DIR__ . '/../..' . '/src/Integrations/Forms/Bricks.php',
@@ -94,17 +100,22 @@ class ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388
         'Maspik\\Integrations\\Forms\\ContactForm7' => __DIR__ . '/../..' . '/src/Integrations/Forms/ContactForm7.php',
         'Maspik\\Integrations\\Forms\\CustomForm' => __DIR__ . '/../..' . '/src/Integrations/Forms/CustomForm.php',
         'Maspik\\Integrations\\Forms\\Divi' => __DIR__ . '/../..' . '/src/Integrations/Forms/Divi.php',
+        'Maspik\\Integrations\\Forms\\EasyDigitalDownloads' => __DIR__ . '/../..' . '/src/Integrations/Forms/EasyDigitalDownloads.php',
         'Maspik\\Integrations\\Forms\\Elementor' => __DIR__ . '/../..' . '/src/Integrations/Forms/Elementor.php',
         'Maspik\\Integrations\\Forms\\ElementorAtomic' => __DIR__ . '/../..' . '/src/Integrations/Forms/ElementorAtomic.php',
         'Maspik\\Integrations\\Forms\\EverestForms' => __DIR__ . '/../..' . '/src/Integrations/Forms/EverestForms.php',
         'Maspik\\Integrations\\Forms\\FluentForms' => __DIR__ . '/../..' . '/src/Integrations/Forms/FluentForms.php',
         'Maspik\\Integrations\\Forms\\Formidable' => __DIR__ . '/../..' . '/src/Integrations/Forms/Formidable.php',
         'Maspik\\Integrations\\Forms\\Forminator' => __DIR__ . '/../..' . '/src/Integrations/Forms/Forminator.php',
+        'Maspik\\Integrations\\Forms\\FunnelKit' => __DIR__ . '/../..' . '/src/Integrations/Forms/FunnelKit.php',
         'Maspik\\Integrations\\Forms\\GravityForms' => __DIR__ . '/../..' . '/src/Integrations/Forms/GravityForms.php',
         'Maspik\\Integrations\\Forms\\HelloPlus' => __DIR__ . '/../..' . '/src/Integrations/Forms/HelloPlus.php',
         'Maspik\\Integrations\\Forms\\JetFormBuilder' => __DIR__ . '/../..' . '/src/Integrations/Forms/JetFormBuilder.php',
+        'Maspik\\Integrations\\Forms\\MemberPress' => __DIR__ . '/../..' . '/src/Integrations/Forms/MemberPress.php',
         'Maspik\\Integrations\\Forms\\MetForm' => __DIR__ . '/../..' . '/src/Integrations/Forms/MetForm.php',
         'Maspik\\Integrations\\Forms\\NinjaForms' => __DIR__ . '/../..' . '/src/Integrations/Forms/NinjaForms.php',
+        'Maspik\\Integrations\\Forms\\SureForms' => __DIR__ . '/../..' . '/src/Integrations/Forms/SureForms.php',
+        'Maspik\\Integrations\\Forms\\WSForm' => __DIR__ . '/../..' . '/src/Integrations/Forms/WSForm.php',
         'Maspik\\Integrations\\Forms\\WooCommerceCheckout' => __DIR__ . '/../..' . '/src/Integrations/Forms/WooCommerceCheckout.php',
         'Maspik\\Integrations\\Forms\\WooCommerceRegistration' => __DIR__ . '/../..' . '/src/Integrations/Forms/WooCommerceRegistration.php',
         'Maspik\\Integrations\\Forms\\WordPressComments' => __DIR__ . '/../..' . '/src/Integrations/Forms/WordPressComments.php',
@@ -113,7 +124,9 @@ class ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388
         'Maspik\\Integrations\\IntegrationsProvider' => __DIR__ . '/../..' . '/src/Integrations/IntegrationsProvider.php',
         'Maspik\\Integrations\\Registry' => __DIR__ . '/../..' . '/src/Integrations/Registry.php',
         'Maspik\\Integrations\\Support\\FieldMapper' => __DIR__ . '/../..' . '/src/Integrations/Support/FieldMapper.php',
+        'Maspik\\Integrations\\Support\\FieldTypeGuesser' => __DIR__ . '/../..' . '/src/Integrations/Support/FieldTypeGuesser.php',
         'Maspik\\Integrations\\Support\\RawPayload' => __DIR__ . '/../..' . '/src/Integrations/Support/RawPayload.php',
+        'Maspik\\Integrations\\Support\\UnknownFieldTypes' => __DIR__ . '/../..' . '/src/Integrations/Support/UnknownFieldTypes.php',
         'Maspik\\Kernel\\Activation' => __DIR__ . '/../..' . '/src/Kernel/Activation.php',
         'Maspik\\Kernel\\Container' => __DIR__ . '/../..' . '/src/Kernel/Container.php',
         'Maspik\\Kernel\\Plugin' => __DIR__ . '/../..' . '/src/Kernel/Plugin.php',
@@ -126,9 +139,9 @@ class ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitab6cf014646fb5e0a78c50c25a69c388::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit85f766dda0e20c4fa01172d52b764ba4::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit85f766dda0e20c4fa01172d52b764ba4::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit85f766dda0e20c4fa01172d52b764ba4::$classMap;
 
         }, null, ClassLoader::class);
     }

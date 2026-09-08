@@ -9,6 +9,11 @@ use Maspik\Premium\ProGate;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * /maspik/v1/license — Pro status + key activation for the License screen.
  *

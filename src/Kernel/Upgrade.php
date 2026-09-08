@@ -12,6 +12,11 @@ use Maspik\Infrastructure\Settings\DashboardRules;
 use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Premium\License;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Idempotent upgrade routine (docs/04 § 3). Runs once per version change on
  * admin_init — for the common case where the plugin files are replaced by a

@@ -8,6 +8,11 @@ use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Required / forbidden language (Unicode script) rules for textarea fields (Pro).
  * Each rule is a regex fragment like \p{Latin} or \p{Han}, matched with /u.

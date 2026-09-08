@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Maspik Matrix (InputGate) — the cloud verdict, run LAST in the submission
  * chain so a bot caught by a cheaper local check never triggers a network call.

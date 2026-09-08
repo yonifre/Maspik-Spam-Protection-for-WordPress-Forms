@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Infrastructure;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Resolves the real client IP with a trust model, not blind header trust.
  *

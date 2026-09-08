@@ -6,6 +6,11 @@ namespace Maspik\Admin;
 
 use Maspik\Infrastructure\Logging\LogRepository;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Native WordPress admin pages — one submenu entry per screen, each mounting
  * its own React bundle. WordPress owns routing/navigation; React owns

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Infrastructure\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Typed access to plugin settings, backed by the v2 wp_maspik_options table,
  * with the dashboard-sync precedence rules (v2's efas_get_spam_api ⊕

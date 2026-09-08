@@ -6,6 +6,11 @@ namespace Maspik\Infrastructure\Geo;
 
 use Maspik\Infrastructure\Logging\LayerStatus;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Country/continent/ASN lookup via freeipapi.com — same endpoint as v2.
  * Returns null on any failure so callers stay fail-open.

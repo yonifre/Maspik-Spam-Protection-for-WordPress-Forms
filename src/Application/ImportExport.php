@@ -7,6 +7,11 @@ namespace Maspik\Application;
 use Maspik\Infrastructure\Settings\Schema;
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Settings import/export in the v2.9.x file format, so a file exported by any
  * existing site imports cleanly into 3.0 and vice-versa (docs/04 § 1.6).

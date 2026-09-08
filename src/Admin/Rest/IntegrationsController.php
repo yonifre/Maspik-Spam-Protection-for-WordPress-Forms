@@ -9,6 +9,11 @@ use Maspik\Integrations\Registry;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * GET  /maspik/v1/integrations         list every form integration + status
  * PATCH /maspik/v1/integrations        { toggleKey: 'yes'|'no' } enable/disable

@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Bit Form adapter.
  * Filter: bitform_filter_form_validation ($validated, $form_id). Return a

@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * BuddyPress registration adapter.
  * Action: bp_signup_validate — the signup email/username live on the global

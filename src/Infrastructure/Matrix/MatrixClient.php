@@ -7,8 +7,15 @@ namespace Maspik\Infrastructure\Matrix;
 use Maspik\Domain\Model\Submission;
 use Maspik\Infrastructure\Logging\LayerStatus;
 use Maspik\Infrastructure\Settings\Settings;
+use Maspik\Infrastructure\Signals\ObservedSignals;
+use Maspik\Infrastructure\Signals\SignalDebugLog;
 use Maspik\Premium\License;
 use Maspik\Premium\ProGate;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * Maspik Matrix (InputGate) cloud client — talks to ipapi.wpmaspik.com/check,
@@ -99,6 +106,8 @@ final class MatrixClient
         // enforces this; this just avoids a pointless round-trip). Pro is
         // effectively unlimited.
         if (! $this->pro->supports('pro') && $this->monthlyRemaining() <= 0) {
+            SignalDebugLog::noteSkipped('monthly free quota exhausted');
+
             return null;
         }
 
@@ -125,8 +134,27 @@ final class MatrixClient
             'maspik_referrer' => DirectPostSignal::referrerFor($submission),
         ];
 
+        // Observation only, under a key of its own.
+        //
+        // The separation from plugin_spam_likelihood is the point, not tidiness:
+        // that floor is weighed when the verdict is formed, so anything routed
+        // into it changes outcomes. This block is written down and nothing more.
+        // The day it should count, that has to be a deliberate change on the
+        // receiving side rather than something this key drifted into.
+        //
+        // Omitted entirely when there is nothing to report, so a site with the
+        // setting off sends exactly the request it sent before.
+        $observed = ObservedSignals::forApi();
+        if ($observed !== null) {
+            $payload['context']['observed_signals'] = $observed;
+        }
+
+        SignalDebugLog::noteRequest($payload);
+
         $body = wp_json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (! is_string($body)) {
+            SignalDebugLog::noteSkipped('payload could not be encoded');
+
             return null;
         }
 
@@ -143,16 +171,22 @@ final class MatrixClient
         ]);
         if (is_wp_error($response)) {
             LayerStatus::record('ai_spam_check', LayerStatus::TIMEOUT, 'Matrix unavailable');
+            SignalDebugLog::noteResponse(0, $response->get_error_message());
 
             return null;
         }
-        if ((int) wp_remote_retrieve_response_code($response) !== 200) {
+
+        $status = (int) wp_remote_retrieve_response_code($response);
+        $raw = (string) wp_remote_retrieve_body($response);
+        SignalDebugLog::noteResponse($status, json_decode($raw, true) ?? $raw);
+
+        if ($status !== 200) {
             LayerStatus::record('ai_spam_check', LayerStatus::ERROR, 'Matrix error');
 
             return null;
         }
 
-        $json = json_decode((string) wp_remote_retrieve_body($response), true);
+        $json = json_decode($raw, true);
         if (! is_array($json) || ! isset($json['is_spam'])) {
             LayerStatus::record('ai_spam_check', LayerStatus::ERROR, 'Matrix invalid response');
 

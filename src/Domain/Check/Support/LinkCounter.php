@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Check\Support;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Counts links the way v2.9.x did: three patterns, summed (a value matching
  * more than one pattern counts multiple times — that is the shipped behavior).

@@ -9,6 +9,11 @@ use Maspik\Application\EngineProvider;
 use Maspik\Frontend\FrontendProvider;
 use Maspik\Integrations\IntegrationsProvider;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Plugin entry point. The only global state in the codebase.
  */

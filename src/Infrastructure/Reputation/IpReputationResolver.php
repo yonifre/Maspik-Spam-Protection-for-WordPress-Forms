@@ -6,6 +6,11 @@ namespace Maspik\Infrastructure\Reputation;
 
 use Maspik\Infrastructure\Logging\LayerStatus;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * External IP-reputation lookups — AbuseIPDB and Proxycheck.io — using the same
  * endpoints v2 called. Each returns an int score or null on any failure so the

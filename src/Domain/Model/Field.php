@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Model;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * One submitted form field, normalized. Array values (checkbox groups etc.)
  * are joined with spaces before checks run — same as v2.9.x implode(" ", ...).

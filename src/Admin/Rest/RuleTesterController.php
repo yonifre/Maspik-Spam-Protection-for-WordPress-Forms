@@ -17,6 +17,11 @@ use Maspik\Infrastructure\Settings\Settings;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * POST /maspik/v1/test-rule — "would this value be blocked?" for the rule
  * editors. Runs the *real* domain check against the rules the user is editing

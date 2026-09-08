@@ -10,6 +10,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Infrastructure\Matrix\DirectPostSignal;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * WordPress core comments.
  * Hook: preprocess_comment ($commentdata). Reject: wp_die() (WP's own spam path).

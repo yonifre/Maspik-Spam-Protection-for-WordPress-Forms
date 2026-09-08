@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Model;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * A normalized form submission: what every integration adapter produces and
  * the only thing the engine ever sees. Immutable by convention.

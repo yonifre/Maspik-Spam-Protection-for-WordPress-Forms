@@ -10,6 +10,11 @@ use Maspik\Domain\Model\Violation;
 use Maspik\Infrastructure\Geo\FreeIpApiResolver;
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The only class that touches wp_maspik_spam_logs. Schema unchanged from v2.
  *
@@ -166,8 +171,14 @@ final class LogRepository
      *
      * Converting on read rather than migrating the table keeps this reversible
      * and costs nothing for the 3.0 rows, which are returned untouched.
+     *
+     * Public because the privacy tools read log rows straight from the table
+     * rather than through recent(), and were therefore json_decode-ing v2 rows
+     * and finding nothing: an erasure request reported success while that
+     * person's older submissions stayed in the table. One conversion, used by
+     * everything that has to read a stored row.
      */
-    private static function normaliseDetail(string $raw): string
+    public static function normaliseDetail(string $raw): string
     {
         $raw = trim($raw);
         if ($raw === '') {
@@ -264,6 +275,29 @@ final class LogRepository
      * submission itself is still there. Deleting stays a separate, explicit
      * action.
      */
+    /**
+     * Record that a human confirmed this really was spam.
+     *
+     * A tag, not a deletion. Turning a blocked row into a rule used to remove
+     * it, which threw away the evidence at the moment it became most useful:
+     * the row is the only proof of what the rule was built from, and the only
+     * example anyone can look at later to ask whether the rule was a good idea.
+     *
+     * The tag is deliberately not 'clean', so every existing query - the
+     * blocked list, the statistics, the retention sweep - keeps counting the
+     * row exactly as it did before. Only the display changes.
+     */
+    public function markConfirmedSpam(int $id): bool
+    {
+        global $wpdb;
+
+        return (bool) $wpdb->update(
+            $wpdb->prefix . 'maspik_spam_logs',
+            ['spam_tag' => 'confirmed'],
+            ['id' => $id]
+        );
+    }
+
     public function markNotSpam(int $id): bool
     {
         global $wpdb;

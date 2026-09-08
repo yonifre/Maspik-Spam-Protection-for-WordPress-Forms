@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Whether a submission source carries the front-end guard fields (honeypot +
  * advanced key). v2 skips them for integrations whose requests can't include

@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * External IP reputation (AbuseIPDB / Proxycheck.io). Blocks when a provider's
  * score for the submitter's IP is at or above the configured threshold.

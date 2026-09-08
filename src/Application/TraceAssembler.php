@@ -6,6 +6,11 @@ namespace Maspik\Application;
 
 use Maspik\Domain\Model\TraceEntry;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Turns a raw pipeline trace into the per-layer status list stored with a log
  * row and rendered in the Logs UI.

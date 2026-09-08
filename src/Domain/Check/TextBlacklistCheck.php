@@ -9,6 +9,11 @@ use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The word/phrase blacklist for text and textarea fields.
  *

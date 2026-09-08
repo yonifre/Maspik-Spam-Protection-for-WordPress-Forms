@@ -7,12 +7,20 @@ namespace Maspik\Frontend;
 use Maspik\Domain\Check\VerificationKeyCheck;
 use Maspik\Domain\Check\HoneypotCheck;
 use Maspik\Infrastructure\Settings\Settings;
+use Maspik\Infrastructure\Signals\ObservedSignals;
+use Maspik\Infrastructure\Signals\SignalSchema;
 use Maspik\Integrations\Forms\ElementorAtomic;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
- * Enqueues the front-end guard script (honeypot + advanced key injection).
- * Replaces v2's inline wp_footer echo with a cacheable static file; the DOM
- * behavior (field names, search/GET-form exclusions) is unchanged.
+ * Enqueues the front-end guard script (honeypot + advanced key injection, and
+ * the client signal collector). Replaces v2's inline wp_footer echo with a
+ * cacheable static file; the DOM behavior (field names, search/GET-form
+ * exclusions) is unchanged.
  */
 final class ScriptInjector
 {
@@ -28,8 +36,9 @@ final class ScriptInjector
     {
         $honeypot = $this->settings->boolEffective('maspikHoneypot');
         $advancedKey = $this->settings->boolEffective('verification_key');
+        $signals = $this->settings->bool('client_signals_observe');
 
-        if (! $honeypot && ! $advancedKey) {
+        if (! $honeypot && ! $advancedKey && ! $signals) {
             return;
         }
 
@@ -40,6 +49,20 @@ final class ScriptInjector
             MASPIK_VERSION,
             true
         );
+
+        if ($signals) {
+            // Ships separately so a site that has not enabled it downloads
+            // nothing, and so the guard script stays inside its size budget.
+            // Depends on the guard: it reads the same config object, and it
+            // attaches to the forms the guard has marked as accepted.
+            wp_enqueue_script(
+                'maspik-signals',
+                MASPIK_URL . 'assets/js/maspik-signals.js',
+                ['maspik-guard'],
+                MASPIK_VERSION,
+                true
+            );
+        }
 
         wp_add_inline_script('maspik-guard', 'window.maspikGuardConfig = ' . wp_json_encode([
             'honeypot' => $honeypot,
@@ -52,6 +75,16 @@ final class ScriptInjector
             // data-interaction-id pseudo-fields, under distinct ids.
             'atomicHpId' => ElementorAtomic::HP_ID,
             'atomicKeyId' => ElementorAtomic::KEY_ID,
+            'atomicSignalsId' => ElementorAtomic::SIGNALS_ID,
+            // Client signals. The version travels with the payload so a page
+            // cached before an upgrade is recognisable as old rather than
+            // malformed.
+            'signals' => $signals,
+            'signalsName' => ObservedSignals::FIELD_NAME,
+            'signalsVersion' => SignalSchema::VERSION,
+            // Rendering probes are the only part of the collector that does
+            // real work, so they stay opt-in.
+            'signalsProbes' => $signals && $this->settings->bool('client_signals_probes'),
         ]) . ';', 'before');
 
         wp_register_style('maspik-guard', false, [], MASPIK_VERSION);

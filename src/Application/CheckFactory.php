@@ -14,6 +14,11 @@ use Maspik\Infrastructure\Reputation\IpReputationResolver;
 use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Translates effective settings (local ⊕ dashboard, v2 precedence) into an
  * EngineConfig, then delegates ordered pipeline assembly to PipelineBuilder.
@@ -83,10 +88,19 @@ final class CheckFactory
      *
      * @return string[]
      */
-    public function pipelineOrder(): array
+    /**
+     * The check ids that are active, in pipeline order.
+     *
+     * Pass the submission whenever the answer is about a real request. Which
+     * layers run is not purely a matter of settings: GuardPolicy switches the
+     * honeypot and the verification key off for sources that cannot carry the
+     * fields, so asking with a stand-in submission over-reports for those two
+     * integrations. Without an argument the answer describes a typical form,
+     * which is what the admin screens want.
+     */
+    public function pipelineOrder(?Submission $submission = null): array
     {
-        $generic = new Submission([], 'generic', 'Generic', '');
-        $config = $this->configFor($generic);
+        $config = $this->configFor($submission ?? new Submission([], 'generic', 'Generic', ''));
 
         return PipelineBuilder::checkOrder($config);
     }

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Infrastructure\Logging;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Request-scoped side-channel for the *outcome* of external protection layers
  * (Matrix, IP reputation, geo) — timeout / error / skipped — which the pure

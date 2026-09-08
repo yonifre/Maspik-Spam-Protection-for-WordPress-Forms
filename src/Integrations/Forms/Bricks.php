@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Bricks builder forms adapter.
  * Hook: bricks/form/validate ($errors, $form). Field types from
@@ -17,12 +22,28 @@ use Maspik\Integrations\AbstractFormIntegration;
 final class Bricks extends AbstractFormIntegration
 {
     /** Bricks field type => FieldType. */
+    /**
+     * Bricks field type => FieldType.
+     *
+     * The keys are the slugs Bricks registers in its form element
+     * (includes/elements/form.php), not the labels its builder shows.
+     *
+     * `url` was missing here, so a URL field on a Bricks form was dropped by
+     * FieldMapper and never reached a single layer — no URL blocklist, no link
+     * limit, nothing — with no warning and nothing in the log to show for it.
+     * Verified present in Bricks 1.9.5 and 1.3.6.
+     *
+     * Deliberately absent: `number`, `checkbox`, `select`, `radio`, `file`,
+     * `datepicker`, `hidden`, and `password`, which hold figures, choices,
+     * files or secrets rather than free text.
+     */
     public static function typeMap(): array
     {
         return [
             'text' => FieldType::TEXT,
             'email' => FieldType::EMAIL,
             'tel' => FieldType::TEL,
+            'url' => FieldType::URL,
             'textarea' => FieldType::TEXTAREA,
         ];
     }

@@ -9,6 +9,11 @@ use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Phone format validation: the value must match at least one allowed format
  * (regex `/.../` or wildcard). Entries that can never match are ignored, and

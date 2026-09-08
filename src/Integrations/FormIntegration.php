@@ -6,6 +6,11 @@ namespace Maspik\Integrations;
 
 use Maspik\Application\SpamGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * One adapter per form plugin. An adapter's whole job:
  *  1. hook the plugin's validation point
@@ -36,6 +41,17 @@ interface FormIntegration
      * than the usual "on unless disabled". Used for checkout-critical flows.
      */
     public function optIn(): bool;
+
+    /**
+     * Whether the screen should ask the owner to confirm a real submission
+     * still completes after switching this on.
+     *
+     * For adapters that stand between a visitor and an account or a payment and
+     * have not been proven against a live install. Getting one of those wrong
+     * costs more than a missed spam message, and the person best placed to
+     * check is the one who just enabled it.
+     */
+    public function needsVerification(): bool;
 
     /** Attach hooks. Only called when available + enabled (+ Pro when required). */
     public function register(SpamGate $gate): void;

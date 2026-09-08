@@ -10,6 +10,11 @@ use Maspik\Premium\ProGate;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Central-Dashboard connection. A site connects with its Dashboard ID; the
  * Dashboard then pushes shared rules (blacklists) into the local `spamapi`

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Application;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * A plain, WordPress-free description of which checks are active for one
  * request and with what parameters. CheckFactory produces it from settings;

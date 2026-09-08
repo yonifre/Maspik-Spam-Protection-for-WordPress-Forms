@@ -10,6 +10,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use WP_Error;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * WordPress core user registration.
  * Hook: registration_errors ($errors, $login, $email). Reject: $errors->add().

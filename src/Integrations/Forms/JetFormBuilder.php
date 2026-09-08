@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * JetFormBuilder adapter.
  * Hook: jet-form-builder/form-handler/before-send ($form_handler).

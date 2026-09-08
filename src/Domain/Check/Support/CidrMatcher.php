@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Domain\Check\Support;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * IPv4 CIDR matching, ported from v2.9.x cidr_match() / ip_is_cidr().
  */

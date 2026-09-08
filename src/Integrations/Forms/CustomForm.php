@@ -13,6 +13,11 @@ use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 use Maspik\Integrations\Support\RawPayload;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Public API for hand-built forms — the one integration with no plugin behind
  * it. A theme or plugin hands MASPIK its fields and gets a verdict back:

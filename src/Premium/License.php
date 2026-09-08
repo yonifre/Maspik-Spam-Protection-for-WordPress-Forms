@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Premium;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * License activation against the wpmaspik.com Digital License Manager (DLM v1).
  *

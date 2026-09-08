@@ -6,10 +6,16 @@ namespace Maspik\Integrations\Forms;
 
 use Maspik\Application\SpamGate;
 use Maspik\Domain\Check\HoneypotCheck;
+use Maspik\Infrastructure\Signals\ObservedSignals;
 use Maspik\Domain\Check\VerificationKeyCheck;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * MetForm adapter (Wpmet's Elementor form widget).
@@ -92,6 +98,7 @@ final class MetForm extends AbstractFormIntegration
         $skip = [
             'form_id' => true, 'form_settings' => true, 'action' => true, 'id' => true, 'form_nonce' => true,
             HoneypotCheck::FIELD_NAME => true, VerificationKeyCheck::FIELD_NAME => true,
+            ObservedSignals::FIELD_NAME => true,
         ];
 
         $raw = [];

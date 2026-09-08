@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * WPForms adapter.
  * Hook: wpforms_process ($fields, $entry, $form_data). Field value lives in

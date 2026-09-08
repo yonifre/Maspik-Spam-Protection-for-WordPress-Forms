@@ -88,7 +88,7 @@ msgid "Unknown"
 msgstr "לא ידוע"
 
 msgid "Honeypot"
-msgstr "מלכודת"
+msgstr "מלכודת דבש"
 
 msgid "Verification Key"
 msgstr "מפתח אימות"

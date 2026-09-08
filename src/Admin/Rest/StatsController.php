@@ -8,6 +8,11 @@ use Maspik\Infrastructure\Logging\LogRepository;
 use Maspik\Premium\ProGate;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * GET /maspik/v1/stats — aggregates powering Dashboard, Protection layer
  * cards ("Blocked 142 submissions", "Last blocked 3 minutes ago"), Analytics

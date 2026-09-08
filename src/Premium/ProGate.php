@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Premium;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Pro feature gate — successor of v2's cfes_is_supporting().
  *

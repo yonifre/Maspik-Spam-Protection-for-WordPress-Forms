@@ -1,15 +1,15 @@
-=== Maspik – Multi-Layer Spam Protection ===
+=== Spam Protection | Maspik ===
 Contributors: maspik, yonifre
 Donate link: https://paypal.me/yonifre
 Tags: spam, anti spam, antispam, contact forms, honeypot
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.0.4
+Stable tag: 3.1.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
-Multi-layer spam protection for forms, comments and WooCommerce. No CAPTCHA, no puzzles — accurate blocking that works out of the box.
+Blocks spam the moment you activate it. No CAPTCHA, no setup, no API key. Multi-Layer. Just install and forget.
 
 == Description ==
 
@@ -95,7 +95,13 @@ Maspik protects WordPress core forms together with many popular form builders:
 * Hello Plus
 * MetForm
 * Bit Form
+* SureForms
+* WS Form
 * BuddyPress Registration
+* MemberPress
+* AffiliateWP
+* Easy Digital Downloads
+* FunnelKit
 * WordPress Comments
 * WordPress Registration
 * Custom PHP forms (simple developer API)
@@ -276,10 +282,30 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 == Changelog ==
 
+= 3.1.0 =
+
+New integrations
+
+* Added support for SureForms, MemberPress, AffiliateWP, Easy Digital Downloads, FunnelKit, and WS Form.
+
+New features
+
+* Added spam correction reporting to help improve detection accuracy.
+* Added support for WordPress's Personal Data Export and Erasure tools.
+* Added behavior-based signals to improve spam detection.
+* Added a new Dashboard widget with protection insights and activity statistics.
+* Added a one-click option to enable full InputGate protection when limited or disabled.
+
+Security
+
+* Protected CSV exports against formula injection.
+
+Improved
+
+* Fixed a bypass that allowed direct scripted submissions through Divi contact forms.
+
 = 3.0.4 =
 
-* Added a Dashboard widget: how much was blocked over the last 30 days and per day, the top five layers and the top five caught values with their share, the most targeted form, and when the last block happened.
-* The Dashboard widget points out when InputGate is off, or limited to checking the IP only, with a one-click way to switch on full protection.
 * Improved compatibility with Fluent Forms, including AJAX submissions.
 * Improved compatibility with Ninja Forms, Contact Form 7, and Elementor Atomic.
 * Improved the spam log with clearer blocking reasons, submitted values, and matched rules.
@@ -328,6 +354,9 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 * Requires PHP 7.4+.
 
 == Upgrade Notice ==
+
+= 3.1.0 =
+New integrations, privacy tools, behaviour signals, and a Dashboard widget.
 
 = 3.0.4 =
 Recommended for everyone, especially Fluent Forms sites.

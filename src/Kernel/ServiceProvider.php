@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Kernel;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 interface ServiceProvider
 {
     /** Register factories into the container. No side effects, no hooks. */

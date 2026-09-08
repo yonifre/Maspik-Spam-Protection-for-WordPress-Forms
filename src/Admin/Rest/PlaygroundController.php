@@ -9,6 +9,11 @@ use Maspik\Infrastructure\ClientIp;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 final class PlaygroundController
 {
     /** @var Playground */

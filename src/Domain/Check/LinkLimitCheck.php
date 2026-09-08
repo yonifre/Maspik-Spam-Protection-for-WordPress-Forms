@@ -9,6 +9,11 @@ use Maspik\Domain\Model\Field;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Maximum number of links in text/textarea fields. max = 0 means no links
  * allowed at all.

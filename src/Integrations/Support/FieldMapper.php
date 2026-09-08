@@ -6,6 +6,11 @@ namespace Maspik\Integrations\Support;
 
 use Maspik\Domain\Model\Field;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Turns a form plugin's fields into the engine's normalized Field[].
  *
@@ -22,15 +27,50 @@ final class FieldMapper
      * @param array<string, string> $typeMap plugin field type => FieldType constant
      * @return Field[]
      */
-    public static function map(array $rawFields, array $typeMap): array
-    {
+    /**
+     * Turn an adapter's raw rows into typed fields.
+     *
+     * A type the map does not know is recorded and then either dropped (the
+     * behaviour this has always had) or, when $inferUnknown is on, scanned as
+     * text. Dropping is silent by nature — nothing warns, nothing logs, the
+     * field simply never reaches the engine — so the recording happens either
+     * way: it is how the maps get corrected.
+     *
+     * @param array<int, array{name?: string, type?: string, value?: mixed}> $rawFields
+     * @param array<string, string> $typeMap
+     * @param string $source integration id, for the record of unknown types
+     * @return Field[]
+     */
+    public static function map(
+        array $rawFields,
+        array $typeMap,
+        bool $inferUnknown = false,
+        string $source = ''
+    ): array {
         $fields = [];
         foreach ($rawFields as $raw) {
             $type = isset($raw['type']) ? (string) $raw['type'] : '';
-            if (! isset($typeMap[$type])) {
+            $name = isset($raw['name']) ? (string) $raw['name'] : '';
+            $value = $raw['value'] ?? '';
+
+            if (isset($typeMap[$type])) {
+                $fields[] = new Field($name, $typeMap[$type], $value);
                 continue;
             }
-            $fields[] = new Field((string) $raw['name'], $typeMap[$type], $raw['value']);
+
+            UnknownFieldTypes::record($source, $type);
+
+            if (! $inferUnknown) {
+                continue;
+            }
+
+            // Guessed from the value, and only ever TEXT or TEXTAREA. See
+            // FieldTypeGuesser for why the other three are off limits.
+            $flat = Field::flatten($value);
+            if ($flat === '') {
+                continue;
+            }
+            $fields[] = new Field($name, FieldTypeGuesser::guess($flat), $value);
         }
 
         return $fields;

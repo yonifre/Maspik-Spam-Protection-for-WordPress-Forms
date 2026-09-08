@@ -7,6 +7,11 @@ namespace Maspik\Domain\Check;
 use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\Violation;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * A check that looks at the whole submission (honeypot, IP, country, AI…).
  * Implementations are pure: all configuration arrives via the constructor,

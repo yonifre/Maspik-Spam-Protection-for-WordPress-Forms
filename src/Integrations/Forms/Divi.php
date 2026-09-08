@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Divi Builder / theme — Contact Form module (et_pb_contact_form).
  *
@@ -88,10 +93,27 @@ final class Divi extends AbstractFormIntegration
     /** Validate the Divi contact POST before the theme renders/sends mail. */
     private function earlyValidate(SpamGate $gate): void
     {
-        if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST)) {
+        if (empty($_POST) || ! $this->isContactRequest()) {
             return;
         }
-        if (empty($_POST) || ! $this->isContactRequest()) {
+
+        // Admin, admin-ajax and REST requests are skipped — unless the request
+        // is provably a contact submission.
+        //
+        // The guard is there so a builder save or an API call that happens to
+        // carry a Divi key is never treated as a visitor's form. But refusing
+        // every one of those contexts outright is a standing bet that Divi will
+        // keep posting to the page: the moment it moves the submission to
+        // admin-ajax or a REST route, scanning stops with nothing to show for
+        // it. Divi 5 already submits over XHR — to the page, so WordPress calls
+        // it an ordinary request — and that is a thin margin to rely on.
+        //
+        // A valid per-form nonce is what makes the difference. Divi issues it
+        // only for a rendered form and rejects the submission without it, so
+        // nothing else can produce one; a stray admin or REST request carrying
+        // the submit key still has no nonce and is still skipped.
+        $contextual = is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST);
+        if ($contextual && ! $this->anySubmittedFormIsGenuine()) {
             return;
         }
 
@@ -105,6 +127,17 @@ final class Divi extends AbstractFormIntegration
             }
 
             $rows = $this->parseRows($id);
+            if ($rows === []) {
+                // Divi 5 builds et_pb_contact_email_fields_<id> in JavaScript at
+                // submit time, so a bot that posts the form directly never sends
+                // it. Divi does not need it — it reads its own stored field
+                // definition server side and mails the submission anyway — so
+                // skipping here meant every scripted submission went unscanned
+                // while real visitors, whose browsers run the script, were
+                // checked normally. That is the shape of the report: manual
+                // tests block, the counter barely moves, and the inbox fills up.
+                $rows = $this->rowsFromPost($id);
+            }
             if ($rows === []) {
                 continue;
             }
@@ -157,6 +190,24 @@ final class Divi extends AbstractFormIntegration
     }
 
     /** Whether this request is a Divi Contact Form POST. */
+    /**
+     * True when at least one submitted form id carries a valid Divi nonce.
+     *
+     * Only used to decide whether an admin, ajax or REST request is really a
+     * visitor's submission. Each form's nonce is verified again in the loop, so
+     * this decides context and nothing about whether a form gets scanned.
+     */
+    private function anySubmittedFormIsGenuine(): bool
+    {
+        foreach ($this->formIds() as $id) {
+            if ($this->nonceOk($id)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function isContactRequest(): bool
     {
         foreach (array_keys($_POST) as $key) {
@@ -275,6 +326,52 @@ final class Divi extends AbstractFormIntegration
      *
      * @param array<string, mixed> $row
      */
+    /**
+     * Reconstruct the field rows from the request when the JavaScript-supplied
+     * list is absent.
+     *
+     * Divi names every input et_pb_contact_<original id>_<form id>, so the
+     * request carries enough to rebuild what the script would have sent. The
+     * plumbing is excluded by name: the honeypot and the captcha are Divi's own
+     * anti-spam fields, not anything a visitor typed, and the field list itself
+     * is what we are standing in for.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function rowsFromPost(string $id): array
+    {
+        $suffix = '_' . $id;
+        $skip = [
+            'et_pb_contact_et_number' . $suffix,
+            'et_pb_contact_captcha' . $suffix,
+            'et_pb_contact_captcha_first_digit' . $suffix,
+            'et_pb_contact_captcha_second_digit' . $suffix,
+            'et_pb_contact_email_fields' . $suffix,
+        ];
+
+        $rows = [];
+        foreach (array_keys((array) $_POST) as $key) {
+            $key = (string) $key;
+            if (strpos($key, 'et_pb_contact_') !== 0 || substr($key, -strlen($suffix)) !== $suffix) {
+                continue;
+            }
+            if (in_array($key, $skip, true)) {
+                continue;
+            }
+
+            // et_pb_contact_message_0 -> "message", which classify() reads to
+            // pick the field type exactly as it would from the script's list.
+            $original = substr($key, strlen('et_pb_contact_'), -strlen($suffix));
+            $rows[] = [
+                'field_id' => $key,
+                'original_id' => $original,
+                'field_type' => $original === 'email' ? 'email' : 'input',
+            ];
+        }
+
+        return $rows;
+    }
+
     private function classify(array $row, string $value): ?string
     {
         $ft = strtolower((string) ($row['field_type'] ?? 'input'));

@@ -10,6 +10,11 @@ use Maspik\Infrastructure\Settings\Settings;
 use Maspik\Integrations\Registry;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Builds the opt-in telemetry payload.
  *

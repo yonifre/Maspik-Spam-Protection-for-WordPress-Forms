@@ -9,7 +9,15 @@ use Maspik\Domain\Model\Verdict;
 use Maspik\Infrastructure\Logging\LayerStatus;
 use Maspik\Infrastructure\Logging\LogRepository;
 use Maspik\Infrastructure\Matrix\DirectPostSignal;
+use Maspik\Infrastructure\Signals\ObservedSignals;
+use Maspik\Infrastructure\Signals\SignalDebugLog;
+use Maspik\Integrations\Support\UnknownFieldTypes;
 use Maspik\Infrastructure\Settings\Settings;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * The single entry point every form integration calls.
@@ -44,6 +52,25 @@ final class SpamGate
         // the resolvers record during this evaluation.
         LayerStatus::reset();
         DirectPostSignal::reset();
+        ObservedSignals::reset();
+        SignalDebugLog::reset();
+        UnknownFieldTypes::reset();
+
+        // Client signals are read here, before the pipeline, so the cloud call
+        // finds them ready if it runs. Deliberately not a check: it returns
+        // nothing, it raises no suspicion floor, and no layer reads it. It is
+        // observation, reported to InputGate and acted on nowhere.
+        //
+        // The layer list is passed as a closure rather than a value because
+        // building it costs a config assembly, and the vast majority of
+        // submissions never reach the call that would send it.
+        ObservedSignals::capture(
+            $submission,
+            $this->settings,
+            function () use ($submission): array {
+                return $this->checkFactory->pipelineOrder($submission);
+            }
+        );
 
         if (apply_filters('maspik/skip_check', false, $submission)) {
             return Verdict::clean();
@@ -86,6 +113,13 @@ final class SpamGate
         }
 
         $verdict = $this->checkFactory->pipelineFor($submission)->evaluate($submission);
+
+        // Development aid, inert unless MASPIK_SIGNALS_DEBUG is defined.
+        // Written here rather than at the cloud call so that a submission a
+        // local layer caught - which never reaches that call - still shows what
+        // the signal field produced.
+        SignalDebugLog::write($submission, $verdict);
+
         $mode = $this->settings->logMode();
 
         if ($verdict->isSpam && $verdict->violation !== null) {

@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace Maspik\Integrations\Support;
 
 use Maspik\Domain\Check\HoneypotCheck;
+use Maspik\Infrastructure\Signals\ObservedSignals;
 use Maspik\Domain\Check\VerificationKeyCheck;
+
+if (! defined('ABSPATH')) {
+    exit;
+}
+
 
 /**
  * Captures everything a form submitted, for the log.
@@ -41,6 +47,11 @@ final class RawPayload
     private const SKIP_KEYS = [
         HoneypotCheck::FIELD_NAME,
         VerificationKeyCheck::FIELD_NAME,
+        // A kilobyte of measurements about the browser, which tells an owner
+        // nothing about whether a submission came from a real customer. Left
+        // in, it would be the longest value on almost every row - and the
+        // longest value is what the log picks as the visitor's "message".
+        ObservedSignals::FIELD_NAME,
     ];
 
     /**

@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Infrastructure\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * THE single source of truth for every option: type, default, and where the
  * dashboard API may contribute a value. The REST layer and the admin SPA
@@ -36,6 +41,23 @@ final class Schema
             // Note: v2's 'NeedPageurl' toggle is gone. Direct POST detection now
             // always runs (DirectPostSignal) — it only scores a submission for
             // Matrix and never blocks by itself, so there is nothing to tune.
+
+            // Client signals. Observation only: the guard script measures how a
+            // submission was produced and the result is reported to InputGate
+            // under its own key. Nothing here participates in a verdict, local
+            // or remote, so there is no false-positive risk to weigh and it is
+            // on by default like the other always-safe layers.
+            'client_signals_observe' => ['type' => self::TYPE_BOOL, 'default' => '1'],
+            // Rendering-anomaly probes. Off by default: they cost real work on
+            // every page load, and unlike the rest of the collector they draw to
+            // a canvas, so they stay something a site opts into.
+            'client_signals_probes' => ['type' => self::TYPE_BOOL, 'default' => ''],
+
+            // MemberPress: also spam-check signups that charge at checkout.
+            // Off by default — MemberPress creates the account before taking
+            // payment, so a false positive there aborts a purchase rather than
+            // just refusing a form.
+            'maspik_memberpress_gate_paid' => ['type' => self::TYPE_BOOL, 'default' => ''],
 
             // Content rules.
             'text_blacklist' => ['type' => self::TYPE_MULTILINE, 'default' => '', 'dashboard' => true],

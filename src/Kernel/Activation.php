@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace Maspik\Kernel;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Activation / upgrade routines. Table definitions are byte-compatible with
  * v2.9.x — see docs/04-migration.md: we keep both tables as-is.

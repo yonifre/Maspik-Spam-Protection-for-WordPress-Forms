@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Infrastructure\Matrix\DirectPostSignal;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Gravity Forms adapter.
  * Hook: gform_validation ($validation_result). Fields are GF_Field objects in

@@ -10,6 +10,11 @@ use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\TraceEntry;
 use Maspik\Domain\Model\Verdict;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Runs checks in the exact v2.9.x order: submission-level checks first
  * (honeypot, key, country, ip, reputation), then field checks per field, then

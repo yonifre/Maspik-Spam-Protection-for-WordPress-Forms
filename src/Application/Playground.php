@@ -12,6 +12,11 @@ use Maspik\Domain\Model\Submission;
 use Maspik\Domain\Model\TraceEntry;
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The Playground: runs the real pipeline in trace mode against a simulated
  * submission. No duplicated detection logic — this IS the engine.

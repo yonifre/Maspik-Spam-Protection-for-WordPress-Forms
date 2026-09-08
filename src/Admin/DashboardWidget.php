@@ -9,6 +9,11 @@ use Maspik\Admin\FullModeNudge;
 use Maspik\Infrastructure\Logging\LogRepository;
 use Maspik\Infrastructure\Settings\Settings;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * The "At a glance" widget on the WordPress Dashboard.
  *

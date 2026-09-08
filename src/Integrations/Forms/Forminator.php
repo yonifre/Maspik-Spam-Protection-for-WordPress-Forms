@@ -8,6 +8,11 @@ use Maspik\Application\SpamGate;
 use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Forminator adapter.
  * Hook: forminator_custom_form_submit_errors ($errors, $form_id, $field_data).

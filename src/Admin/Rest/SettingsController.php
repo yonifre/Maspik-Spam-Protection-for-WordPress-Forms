@@ -10,6 +10,11 @@ use Maspik\Infrastructure\Settings\Settings;
 use WP_REST_Request;
 use WP_REST_Response;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * GET/PATCH /maspik/v1/settings — schema-driven: the SPA renders from the
  * same Schema the server validates against. Plus export/import of the whole

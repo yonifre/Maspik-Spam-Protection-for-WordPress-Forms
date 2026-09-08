@@ -17,6 +17,11 @@ use Maspik\Kernel\Container;
 use Maspik\Kernel\ServiceProvider;
 use Maspik\Premium\ProGate;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 final class EngineProvider implements ServiceProvider
 {
     public function register(Container $c): void

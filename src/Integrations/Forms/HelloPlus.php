@@ -9,6 +9,11 @@ use Maspik\Domain\Model\FieldType;
 use Maspik\Integrations\AbstractFormIntegration;
 use Maspik\Integrations\Support\FieldMapper;
 
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+
 /**
  * Hello+ (HelloPlus) forms adapter. Same Elementor-style record/ajax_handler
  * mechanism as the Elementor adapter, on its own hook.
