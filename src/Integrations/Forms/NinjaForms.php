@@ -80,7 +80,7 @@ final class NinjaForms extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('ninja_forms_submit_data', function ($formData) use ($gate) {
+        add_filter('ninja_forms_submit_data', \Maspik\Kernel\Guard::wrap(function ($formData) use ($gate) {
             $formId = isset($formData['id']) ? $formData['id'] : 0;
             if (apply_filters('maspik_disable_ninjaforms_spam_check', false, $formId)) {
                 return $formData;
@@ -120,7 +120,7 @@ final class NinjaForms extends AbstractFormIntegration
             $formData['errors']['fields'][$target] = $gate->errorMessage($verdict);
 
             return $formData;
-        });
+        }));
     }
 
     /**

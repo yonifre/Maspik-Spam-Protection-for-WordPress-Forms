@@ -66,14 +66,14 @@ final class Formidable extends AbstractFormIntegration
     public function register(SpamGate $gate): void
     {
         // Per-field pass: collect id/type/value (types aren't in item_meta).
-        add_filter('frm_validate_field_entry', function ($errors, $postedField = null, $postedValue = '', $args = []) {
+        add_filter('frm_validate_field_entry', \Maspik\Kernel\Guard::wrap(function ($errors, $postedField = null, $postedValue = '', $args = []) {
             $this->collect($postedField, $postedValue);
 
             return $errors;
-        }, 10, 4);
+        }), 10, 4);
 
         // Entry pass (runs after all fields): evaluate once, then reset.
-        add_filter('frm_validate_entry', function ($errors, $values = []) use ($gate) {
+        add_filter('frm_validate_entry', \Maspik\Kernel\Guard::wrap(function ($errors, $values = []) use ($gate) {
             $raw = $this->collected;
             $this->collected = [];
 
@@ -92,7 +92,7 @@ final class Formidable extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 20, 2);
+        }), 20, 2);
     }
 
     /** Buffer one posted field as name/type/value (name = Formidable error key). */

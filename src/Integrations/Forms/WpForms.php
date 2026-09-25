@@ -62,7 +62,7 @@ final class WpForms extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('wpforms_process', function ($fields, $entry, $formData) use ($gate) {
+        add_action('wpforms_process', \Maspik\Kernel\Guard::wrap(function ($fields, $entry, $formData) use ($gate) {
             $formId = isset($formData['id']) ? $formData['id'] : 0;
             if (apply_filters('maspik_disable_wpforms_spam_check', false, $formId)) {
                 return;
@@ -86,6 +86,6 @@ final class WpForms extends AbstractFormIntegration
             $fieldName = $verdict->violation !== null ? $verdict->violation->fieldName : null;
             $target = ($fieldName !== null && isset($fields[$fieldName])) ? $fieldName : 'header';
             wpforms()->process->errors[$formId][$target] = $message;
-        }, 10, 3);
+        }), 10, 3);
     }
 }

@@ -76,18 +76,18 @@ final class Divi extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('wp_loaded', function () use ($gate) {
+        add_action('wp_loaded', \Maspik\Kernel\Guard::wrap(function () use ($gate) {
             $this->earlyValidate($gate);
-        }, 0);
-        add_filter('pre_wp_mail', function ($shortCircuit, $atts = []) {
+        }), 0);
+        add_filter('pre_wp_mail', \Maspik\Kernel\Guard::wrap(function ($shortCircuit, $atts = []) {
             return $this->preWpMail($shortCircuit);
-        }, 5, 2);
-        add_filter('gettext', function ($translated, $text = '', $domain = '') {
+        }), 5, 2);
+        add_filter('gettext', \Maspik\Kernel\Guard::wrap(function ($translated, $text = '', $domain = '') {
             return $this->gettext($translated, (string) $text, (string) $domain);
-        }, 10, 3);
-        add_action('shutdown', function () {
+        }), 10, 3);
+        add_action('shutdown', \Maspik\Kernel\Guard::wrap(function () {
             $this->reset();
-        }, 999);
+        }), 999);
     }
 
     /** Validate the Divi contact POST before the theme renders/sends mail. */
@@ -210,13 +210,7 @@ final class Divi extends AbstractFormIntegration
 
     private function isContactRequest(): bool
     {
-        foreach (array_keys($_POST) as $key) {
-            if (strpos((string) $key, 'et_pb_contactform_submit_') === 0) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->formIds() !== [];
     }
 
     /**
@@ -228,7 +222,23 @@ final class Divi extends AbstractFormIntegration
     {
         $ids = [];
         foreach (array_keys($_POST) as $key) {
-            if (preg_match('/^et_pb_contactform_submit_(.+)$/', (string) $key, $m) && $m[1] !== '') {
+            $key = (string) $key;
+
+            // The submit button. A browser sends it because a button was
+            // clicked; a script has no reason to include it at all.
+            if (preg_match('/^et_pb_contactform_submit_(.+)$/', $key, $m) && $m[1] !== '') {
+                $ids[] = $m[1];
+                continue;
+            }
+
+            // The nonce, which is how Divi itself decides a submission
+            // happened — ContactFormHandler sets $_submitted from exactly this
+            // key and never looks at the button. Keying off the button alone
+            // meant a scripted post was mailed by Divi and skipped by us: no
+            // form id, so nothing to scan and nothing logged. The nonce is
+            // still verified below, so this widens what we look at without
+            // widening what we accept.
+            if (preg_match('/^_wpnonce-et-pb-contact-form-submitted-(.+)$/', $key, $m) && $m[1] !== '') {
                 $ids[] = $m[1];
             }
         }
@@ -339,6 +349,67 @@ final class Divi extends AbstractFormIntegration
      * @return array<int, array<string, mixed>>
      */
     private function rowsFromPost(string $id): array
+    {
+        $rows = $this->legacyRowsFromPost($id);
+
+        return $rows === [] ? $this->divi5RowsFromPost() : $rows;
+    }
+
+    /**
+     * Divi 5 names its inputs after the form's *position*, not its id.
+     *
+     *   ContactFieldModule::get_field_unique_id() builds
+     *   "et_pb_contact_{form order index}_{field id}_{field order index}"
+     *   -> et_pb_contact_0_name_0, et_pb_contact_0_email_1, ...
+     *
+     * while the id this method is given comes from the nonce key, and
+     * ContactFormUtils::get_unique_id() makes that a module uuid (or an md5).
+     * The two never share a substring, so legacyRowsFromPost()'s "ends with
+     * _{id}" test matched nothing on a Divi 5 form and the submission was
+     * dropped before anything was scanned - not blocked, not logged, not
+     * counted. Every Divi fix before this one was on the Divi 4 path, which is
+     * why manual tests kept passing while real Divi 5 sites kept receiving
+     * spam.
+     *
+     * The pattern anchors digits on both sides so it cannot swallow a Divi 4
+     * name: et_pb_contact_name_0 has no digits where the form index belongs.
+     *
+     * Every Divi 5 form on a page has its own order index, but a browser only
+     * posts the form that was submitted, so collecting each matching key is
+     * safe - there is no second form's data in $_POST to confuse with it.
+     */
+    private function divi5RowsFromPost(): array
+    {
+        $rows = [];
+        foreach (array_keys((array) $_POST) as $key) {
+            $key = (string) $key;
+            if (! preg_match('/^et_pb_contact_\\d+_(.+)_\\d+$/', $key, $m)) {
+                continue;
+            }
+
+            // Divi 5 lowercases the field id when it builds both the input name
+            // and its own field map, so this matches what Divi itself stores.
+            $original = strtolower($m[1]);
+
+            // Divi's own anti-spam inputs, should a build ever name them this
+            // way. They carry no visitor text and scanning them means logging a
+            // captcha answer.
+            if (in_array($original, ['et_number', 'captcha', 'captcha_first_digit', 'captcha_second_digit'], true)) {
+                continue;
+            }
+
+            $rows[] = [
+                'field_id' => $key,
+                'original_id' => $original,
+                'field_type' => $original === 'email' ? 'email' : 'input',
+            ];
+        }
+
+        return $rows;
+    }
+
+    /** Divi 4: every input ends with _{form number}. */
+    private function legacyRowsFromPost(string $id): array
     {
         $suffix = '_' . $id;
         $skip = [

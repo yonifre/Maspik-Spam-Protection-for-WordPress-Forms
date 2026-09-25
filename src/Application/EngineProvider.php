@@ -86,9 +86,9 @@ final class EngineProvider implements ServiceProvider
         // (activate/migrate/deactivate/the twice-daily recheck) — decoupled via
         // a hook rather than injecting MatrixClient into License, which would
         // be circular (MatrixClient already depends on License for its token).
-        add_action('maspik/license_changed', static function () use ($c): void {
+        add_action('maspik/license_changed', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(MatrixClient::class)->refreshUsage();
-        });
+        }));
 
         // Opt-in telemetry. Registered here rather than in AdminProvider because
         // it runs on cron, which has no admin context.

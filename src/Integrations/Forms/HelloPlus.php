@@ -56,7 +56,7 @@ final class HelloPlus extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('hello_plus/forms/validation', function ($record, $ajaxHandler) use ($gate) {
+        add_action('hello_plus/forms/validation', \Maspik\Kernel\Guard::wrap(function ($record, $ajaxHandler) use ($gate) {
             if (apply_filters('maspik_disable_helloplus_spam_check', false, $record)) {
                 return;
             }
@@ -85,6 +85,6 @@ final class HelloPlus extends AbstractFormIntegration
                 $target = 'maspik';
             }
             $ajaxHandler->add_error($target, $message);
-        }, 10, 2);
+        }), 10, 2);
     }
 }

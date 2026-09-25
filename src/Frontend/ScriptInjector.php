@@ -85,6 +85,16 @@ final class ScriptInjector
             // Rendering probes are the only part of the collector that does
             // real work, so they stay opt-in.
             'signalsProbes' => $signals && $this->settings->bool('client_signals_probes'),
+            // Escape hatch for forms the guard's own rules cannot recognise.
+            // It already skips search forms, GET forms and forms posting to
+            // another host; this covers the rest - a same-site endpoint that
+            // rejects unknown parameters, say. A form carrying
+            // data-maspik-skip is excluded without any filter.
+            //
+            //   add_filter('maspik_guard_skip_selector', function () {
+            //       return '#my-gateway-form, .no-maspik';
+            //   });
+            'skipSelector' => (string) apply_filters('maspik_guard_skip_selector', ''),
         ]) . ';', 'before');
 
         wp_register_style('maspik-guard', false, [], MASPIK_VERSION);

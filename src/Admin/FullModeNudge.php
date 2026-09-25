@@ -71,8 +71,8 @@ final class FullModeNudge
 
     public function register(): void
     {
-        add_action('admin_init', [$this, 'handleAction']);
-        add_action('admin_notices', [$this, 'render']);
+        add_action('admin_init', \Maspik\Kernel\Guard::wrap([$this, 'handleAction']));
+        add_action('admin_notices', \Maspik\Kernel\Guard::wrap([$this, 'render']));
     }
 
     /**

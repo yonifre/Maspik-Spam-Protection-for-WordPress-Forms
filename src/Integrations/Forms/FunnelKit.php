@@ -93,7 +93,7 @@ final class FunnelKit extends AbstractFormIntegration
         // Priority 1: FunnelKit's own handler is on the default 10, and once it
         // runs the lead has already gone to the CRM.
         foreach (['wp_ajax_wffn_submit_custom_optin_form', 'wp_ajax_nopriv_wffn_submit_custom_optin_form'] as $hook) {
-            add_action($hook, function () use ($gate) {
+            add_action($hook, \Maspik\Kernel\Guard::wrap(function () use ($gate) {
                 if (apply_filters('maspik_disable_funnelkit_spam_check', false)) {
                     return;
                 }
@@ -116,7 +116,7 @@ final class FunnelKit extends AbstractFormIntegration
                 // is the honest option here; inventing a different response
                 // shape would not reach the page either.
                 wp_send_json(['message' => $gate->errorMessage($verdict)]);
-            }, 1);
+            }), 1);
         }
     }
 

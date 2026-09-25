@@ -76,7 +76,7 @@ final class WooCommerceRegistration extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('woocommerce_registration_errors', function ($errors, $username = '', $email = '') use ($gate) {
+        add_filter('woocommerce_registration_errors', \Maspik\Kernel\Guard::wrap(function ($errors, $username = '', $email = '') use ($gate) {
             // Pro-only; default on (only an explicit 'no' disables it).
             if (! $this->proGate->supports('plugin')) {
                 return $errors;
@@ -116,7 +116,7 @@ final class WooCommerceRegistration extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 9999, 3);
+        }), 9999, 3);
     }
 
     /** Whether billing_* fields are present, i.e. account creation at checkout. */

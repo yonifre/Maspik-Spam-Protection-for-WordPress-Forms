@@ -35,6 +35,7 @@ final class Upgrade
     private const SHARE_REPAIRED = 'maspik_share_data_repaired';
     private const CUSTOM_FORM_REPAIRED = 'maspik_custom_form_optin_repaired';
     private const LANGUAGE_LISTS_REPAIRED = 'maspik_language_lists_repaired';
+    private const KEY_CHECK_REPAIRED = 'maspik_verification_key_repaired';
 
     public static function maybeRun(): void
     {
@@ -51,6 +52,7 @@ final class Upgrade
         self::repairShareDataOptIn();
         self::repairCustomFormOptIn();
         self::repairLanguageLists();
+        self::repairVerificationKey();
 
         $stored = (string) get_option(self::VERSION_OPTION, '');
         if ($stored === MASPIK_VERSION) {
@@ -101,16 +103,73 @@ final class Upgrade
 
         if (self::cameFromV2()) {
             $settings = new Settings();
-            $stored = trim($settings->raw('maspik_matrix_api_mode'));
-            // '' and anything unrecognised meant "full" under v2, and so did
-            // the retired '3' (IP + banned words), which 3.0 already treats
-            // as full. Normalising it here keeps the settings UI coherent too.
-            if (! in_array($stored, ['2', '4'], true)) {
+            $rows = $settings->all();
+            // Row existence first. raw() answers with the Schema default when
+            // there is no row, and that default is '2' - a value this check
+            // accepts - so reading through raw() made the no-row case, the only
+            // case this repair exists for, look like a deliberate IP-only
+            // choice. The repair then did nothing on every site it was meant to
+            // help.
+            $stored = isset($rows['maspik_matrix_api_mode'])
+                ? trim($rows['maspik_matrix_api_mode'])
+                : null;
+            // No row, '' and anything unrecognised all meant "full" under v2,
+            // and so did the retired '3' (IP + banned words), which 3.0 already
+            // treats as full. Normalising it here keeps the settings UI coherent
+            // too.
+            if ($stored === null || ! in_array($stored, ['2', '4'], true)) {
                 $settings->save('maspik_matrix_api_mode', '4');
             }
         }
 
         update_option(self::DEPTH_REPAIRED, '1');
+    }
+
+    /**
+     * Keep the Verification Key layer off for a v2 site that was running it off.
+     *
+     * The mirror image of repairInputGateDepth(), and it comes from the same
+     * gap: v2 seeded its defaults into the settings table exactly once per
+     * install, behind the `maspik_run_once` gate, and `maspikTimeCheck` only
+     * joined that default list in 2.5.0. An install older than that was already
+     * past the gate, so the row was never written - and v2's runtime reader
+     * treated a missing row as off:
+     *
+     *     $local_val    = maspik_get_settings('maspikTimeCheck');  // null
+     *     $local_truthy = !empty($local_val) && ...                // false
+     *     return $local_truthy || $api_truthy;                     // false
+     *
+     * (efas_get_spam_api, includes/functions.php - the defaults array is not
+     * consulted there.) Those sites ran for years with the layer off. 3.0 reads
+     * the same missing row as the Schema default, '1', so updating switched a
+     * blocking layer on for them, and the first symptom is genuine enquiries
+     * being refused - exactly the reports we have had.
+     *
+     * Writing the answer down rather than leaving it inferred also means the
+     * Protection screen finally shows what the site is actually doing.
+     *
+     * A site that has since saved the setting has a row of its own and is left
+     * alone, in either position. A fresh 3.x install never ran v2 and keeps the
+     * on-by-default the layer was designed with.
+     */
+    private static function repairVerificationKey(): void
+    {
+        if (get_option(self::KEY_CHECK_REPAIRED)) {
+            return;
+        }
+
+        if (self::cameFromV2()) {
+            $settings = new Settings();
+            // Row existence, not raw(): raw() fills in the Schema default, so a
+            // site that never had the row is indistinguishable there from one
+            // that deliberately switched the layer on.
+            $stored = $settings->all();
+            if (! isset($stored['verification_key']) && ! isset($stored['maspikTimeCheck'])) {
+                $settings->save('verification_key', '0');
+            }
+        }
+
+        update_option(self::KEY_CHECK_REPAIRED, '1');
     }
 
     /**
@@ -177,7 +236,14 @@ final class Upgrade
      */
     private static function cameFromV2(): bool
     {
-        return get_option('spamcounter', null) !== null
+        // `maspik_run_once` is the reliable one: v2 added it on every install,
+        // from its own admin bootstrap, and v3 never writes it. The other three
+        // each need the site to have done something first - blocked a spam
+        // (spamcounter), connected the Dashboard (spamapi) or activated a
+        // licence - so a quiet free site matched none of them and was read as a
+        // fresh install, which is how it could miss these repairs entirely.
+        return get_option('maspik_run_once', null) !== null
+            || get_option('spamcounter', null) !== null
             || get_option('spamapi', null) !== null
             || get_option('maspik_dlm_license', null) !== null;
     }

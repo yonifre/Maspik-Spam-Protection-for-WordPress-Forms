@@ -76,7 +76,7 @@ final class EverestForms extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('everest_forms_process_initial_errors', function ($errors, $formData) use ($gate) {
+        add_filter('everest_forms_process_initial_errors', \Maspik\Kernel\Guard::wrap(function ($errors, $formData) use ($gate) {
             $formId = isset($formData['id']) ? $formData['id'] : 0;
             if (apply_filters('maspik_disable_everestforms_spam_check', false, $formId)) {
                 return $errors;
@@ -109,6 +109,6 @@ final class EverestForms extends AbstractFormIntegration
             $errors[$formId][$target] = $gate->errorMessage($verdict);
 
             return $errors;
-        }, 10, 2);
+        }), 10, 2);
     }
 }

@@ -48,18 +48,18 @@ final class WordPressComments extends AbstractFormIntegration
         // comment_post_ID; without it the request did not come from a rendered
         // comment form. Signal only - it never blocks on its own. Score 5
         // identifies WordPress comments as the source (v2: wp-general.php).
-        add_filter('maspik/direct_post_score', static function ($score, $submission = null) {
+        add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score, $submission = null) {
             return self::directPostSentinel($submission) === null
                 ? $score
                 : max((int) $score, DirectPostSignal::WP_COMMENTS);
-        }, 10, 2);
+        }), 10, 2);
 
         // The matching sentinel, forwarded as `maspik_referrer` (v2: wp-general.php).
-        add_filter('maspik/direct_post_referrer', static function ($sentinel, $submission = null) {
+        add_filter('maspik/direct_post_referrer', \Maspik\Kernel\Guard::wrap(static function ($sentinel, $submission = null) {
             return self::directPostSentinel($submission) ?? $sentinel;
-        }, 10, 2);
+        }), 10, 2);
 
-        add_filter('preprocess_comment', function ($commentdata) use ($gate) {
+        add_filter('preprocess_comment', \Maspik\Kernel\Guard::wrap(function ($commentdata) use ($gate) {
             $postId = isset($commentdata['comment_post_ID']) ? (int) $commentdata['comment_post_ID'] : 0;
             if (apply_filters('maspik_disable_wp_comments_spam_check', false, $postId, $commentdata)) {
                 return $commentdata;
@@ -91,7 +91,7 @@ final class WordPressComments extends AbstractFormIntegration
             }
 
             return $commentdata;
-        }, 10, 1);
+        }), 10, 1);
     }
 
     /**

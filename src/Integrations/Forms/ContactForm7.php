@@ -62,18 +62,18 @@ final class ContactForm7 extends AbstractFormIntegration
         // flows, so this is strong evidence rather than proof, and sending the
         // top score would push borderline real submissions over InputGate's
         // line.
-        add_filter('maspik/direct_post_score', static function ($score, $submission = null) {
+        add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score, $submission = null) {
             return self::directPostSentinel($submission) === null
                 ? $score
                 : max((int) $score, DirectPostSignal::CF7);
-        }, 10, 2);
+        }), 10, 2);
 
         // The matching sentinel, forwarded as `maspik_referrer` (v2: no_cf7_id).
-        add_filter('maspik/direct_post_referrer', static function ($sentinel, $submission = null) {
+        add_filter('maspik/direct_post_referrer', \Maspik\Kernel\Guard::wrap(static function ($sentinel, $submission = null) {
             return self::directPostSentinel($submission) ?? $sentinel;
-        }, 10, 2);
+        }), 10, 2);
 
-        add_filter('wpcf7_validate', function ($result, $tags) use ($gate) {
+        add_filter('wpcf7_validate', \Maspik\Kernel\Guard::wrap(function ($result, $tags) use ($gate) {
             $formId = isset($_POST['_wpcf7']) ? (int) $_POST['_wpcf7'] : 0;
             if (apply_filters('maspik_disable_cf7_spam_check', false, $formId)) {
                 return $result;
@@ -97,7 +97,7 @@ final class ContactForm7 extends AbstractFormIntegration
             }
 
             return $result;
-        }, 10, 2);
+        }), 10, 2);
     }
 
     /** @param array<int, object> $tags */

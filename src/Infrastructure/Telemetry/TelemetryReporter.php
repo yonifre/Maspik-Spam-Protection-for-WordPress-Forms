@@ -51,11 +51,11 @@ final class TelemetryReporter
 
     public function register(): void
     {
-        add_action(self::CRON_HOOK, [$this, 'send']);
+        add_action(self::CRON_HOOK, \Maspik\Kernel\Guard::wrap([$this, 'send']));
 
         // Schedule lazily: only once someone has actually opted in, so a site
         // that never opts in carries no cron event at all.
-        add_action('init', [$this, 'maybeSchedule'], 20);
+        add_action('init', \Maspik\Kernel\Guard::wrap([$this, 'maybeSchedule']), 20);
     }
 
     public function maybeSchedule(): void

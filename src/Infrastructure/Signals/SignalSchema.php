@@ -30,7 +30,37 @@ if (! defined('ABSPATH')) {
  */
 final class SignalSchema
 {
-    /** Current payload version. Bumped when the field set changes shape. */
+    /**
+     * Current payload version.
+     *
+     * DO NOT BUMP THIS WITHOUT THE RECEIVER SHIPPING FIRST.
+     *
+     * The old comment here said "bumped when the field set changes shape",
+     * which is the instruction that breaks the site. InputGate's
+     * scoreObservedSignals() scores version 1 and nothing else: a version 2
+     * payload is accepted, validated and stored, and then scored as no_data. It
+     * does not error and nothing in the response says anything is wrong - every
+     * behavioural detection simply stops, webdriver and honeypot included, on
+     * every site running the release that bumped it. Silently, until somebody
+     * notices the spam.
+     *
+     * Changing the field set does not require a bump. Fields were removed in
+     * 3.1.1 with this left at 1: the receiver looks each schema key up in the
+     * payload rather than iterating what arrives, so a key that is absent is
+     * skipped before any coercion runs and never counts as a rejection.
+     *
+     * The order, when a real schema change does need one:
+     *
+     *   1. Tell the receiving side.
+     *   2. They ship SUPPORTED_VERSION accepting both 1 and 2.
+     *   3. They confirm it is deployed.
+     *   4. Only then does a plugin release carry the new number.
+     *
+     * Until then, context.plugin_version is in the same request and is the
+     * right thing to branch on.
+     *
+     * SignalSchemaVersionTest guards this constant for the same reason.
+     */
     public const VERSION = 1;
 
     /** Automation tool names the collector is allowed to report. */
@@ -54,8 +84,11 @@ final class SignalSchema
         'automation' => ['enum'],
         'headless_ua' => ['bool'],
         'client_hints_hl' => ['bool'],
-        'cdp_stack' => ['bool'],
-        'cdp_console' => ['bool'],
+        // 'cdp_stack' and 'cdp_console' lived here. The collector no longer
+        // produces them - they could only be measured by writing to the
+        // console on every page load - and dropping them from the whitelist
+        // means a page cached with the old script has them ignored rather than
+        // forwarded.
         'inner_eq_outer' => ['bool'],
         'no_outer_dims' => ['bool'],
         'chrome_rt_missing' => ['bool'],

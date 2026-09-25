@@ -22,4 +22,9 @@ foreach ( $wpdb->get_col( $wpdb->prepare(
 ) ) as $option ) {
     delete_option( $option );
 }
+// Two v2 leftovers that the maspik_ prefix above does not match. The user
+// asked for all data to go, and a row that survives an uninstall also makes a
+// later fresh install look like an upgrade from v2 to Upgrade::cameFromV2().
 delete_option( 'spamapi' );
+delete_option( 'spamcounter' );
+delete_option( 'shere_data' );

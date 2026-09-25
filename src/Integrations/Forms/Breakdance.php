@@ -74,9 +74,9 @@ final class Breakdance extends AbstractFormIntegration
     public function register(SpamGate $gate): void
     {
         foreach (self::ACTIONS as $action) {
-            add_filter('breakdance_form_run_action_' . $action, function ($canExecute, $action = null, $extra = [], $form = [], $settings = []) use ($gate) {
+            add_filter('breakdance_form_run_action_' . $action, \Maspik\Kernel\Guard::wrap(function ($canExecute, $action = null, $extra = [], $form = [], $settings = []) use ($gate) {
                 return $this->maybeBlock($gate, $canExecute, $extra);
-            }, 1, 5);
+            }), 1, 5);
         }
     }
 

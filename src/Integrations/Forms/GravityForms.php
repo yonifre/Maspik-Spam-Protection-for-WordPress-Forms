@@ -67,20 +67,20 @@ final class GravityForms extends AbstractFormIntegration
         // any of those missing means the post did not come from the rendered
         // form. Signal only - it never blocks on its own. Score 6 identifies
         // Gravity Forms as the source in the cloud (v2: gravityforms.php).
-        add_filter('maspik/direct_post_score', static function ($score, $submission = null) {
+        add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score, $submission = null) {
             return self::directPostSentinel($submission) === null
                 ? $score
                 : max((int) $score, DirectPostSignal::GRAVITY_FORMS);
-        }, 10, 2);
+        }), 10, 2);
 
         // The matching sentinel, forwarded as `maspik_referrer`. Gravity has
         // several distinct failure markers and v2 reported which one fired, so
         // the server can tell a forged post from a stale form cache.
-        add_filter('maspik/direct_post_referrer', static function ($sentinel, $submission = null) {
+        add_filter('maspik/direct_post_referrer', \Maspik\Kernel\Guard::wrap(static function ($sentinel, $submission = null) {
             return self::directPostSentinel($submission) ?? $sentinel;
-        }, 10, 2);
+        }), 10, 2);
 
-        add_filter('gform_validation', function ($result) use ($gate) {
+        add_filter('gform_validation', \Maspik\Kernel\Guard::wrap(function ($result) use ($gate) {
             $form = isset($result['form']) ? $result['form'] : array();
             $formId = isset($form['id']) ? $form['id'] : 0;
             if (apply_filters('maspik_disable_gravityforms_spam_check', false, $formId, $form)) {
@@ -123,7 +123,7 @@ final class GravityForms extends AbstractFormIntegration
             }
 
             return $result;
-        }, 10, 1);
+        }), 10, 1);
     }
 
     /**

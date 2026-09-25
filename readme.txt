@@ -5,7 +5,7 @@ Tags: spam, anti spam, antispam, contact forms, honeypot
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.0
+Stable tag: 3.1.2
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -282,6 +282,25 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 == Changelog ==
 
+= 3.1.2 =
+Fixed
+
+* Fixed Divi 5 contact forms not being scanned due to differences in field naming.
+* Prevented Maspik file issues from causing critical errors or affecting other plugins. Affected components are now disabled with an admin notice explaining how to resolve the issue.
+
+= 3.1.1 =
+
+Fixed
+
+* Prevented Maspik fields from being added to forms that submit to external websites.
+* Improved settings migration for sites upgraded from version 2, while preserving user-defined settings.
+* Developers: exclude a form with a `data-maspik-skip` attribute, or the new `maspik_guard_skip_selector` filter.
+
+Improved
+
+* Browser behaviour now counts for more when blocking spam. As part of InputGate, the cloud examines a range of behaviours and weighs them together with other details of the submission to identify unwanted bots.
+* Improved the Verification Key layer description and added a cache reminder when enabling it.
+
 = 3.1.0 =
 
 New integrations
@@ -302,7 +321,7 @@ Security
 
 Improved
 
-* Fixed a bypass that allowed direct scripted submissions through Divi contact forms.
+* Fixed two bypasses that allowed direct scripted submissions through Divi contact forms. Divi 5 assembles part of a submission in the browser and treats the security token alone as proof a form was sent; Maspik required both that browser-built data and the submit button, so scripted submissions were delivered by Divi and never scanned.
 
 = 3.0.4 =
 
@@ -354,6 +373,12 @@ Improved
 * Requires PHP 7.4+.
 
 == Upgrade Notice ==
+
+= 3.1.2 =
+Recommended for everyone, and required for sites using Divi.
+
+= 3.1.1 =
+Recommended for everyone, and required for WooCommerce sites using an external payment gateway.
 
 = 3.1.0 =
 New integrations, privacy tools, behaviour signals, and a Dashboard widget.

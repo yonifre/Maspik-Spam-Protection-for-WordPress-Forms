@@ -62,7 +62,7 @@ final class MetForm extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('mf_after_validation_check', function ($validationData) use ($gate) {
+        add_filter('mf_after_validation_check', \Maspik\Kernel\Guard::wrap(function ($validationData) use ($gate) {
             // Respect MetForm's own verdict; only run when it considers valid.
             if (! is_array($validationData) || empty($validationData['is_valid'])) {
                 return $validationData;
@@ -83,7 +83,7 @@ final class MetForm extends AbstractFormIntegration
             }
 
             return $validationData;
-        }, 10, 1);
+        }), 10, 1);
     }
 
     /**

@@ -24,12 +24,12 @@ final class FrontendProvider implements ServiceProvider
 
     public function boot(Container $c): void
     {
-        add_action('wp_enqueue_scripts', static function () use ($c): void {
+        add_action('wp_enqueue_scripts', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(ScriptInjector::class)->enqueue();
-        });
+        }));
         // v2 also injected on the login/registration screen.
-        add_action('login_enqueue_scripts', static function () use ($c): void {
+        add_action('login_enqueue_scripts', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(ScriptInjector::class)->enqueue();
-        });
+        }));
     }
 }

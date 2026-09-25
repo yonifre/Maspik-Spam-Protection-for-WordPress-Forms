@@ -70,7 +70,7 @@ final class Bricks extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('bricks/form/validate', function ($errors, $form) use ($gate) {
+        add_filter('bricks/form/validate', \Maspik\Kernel\Guard::wrap(function ($errors, $form) use ($gate) {
             if (apply_filters('maspik_disable_bricks_spam_check', false, $form)) {
                 return $errors;
             }
@@ -100,6 +100,6 @@ final class Bricks extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 10, 2);
+        }), 10, 2);
     }
 }

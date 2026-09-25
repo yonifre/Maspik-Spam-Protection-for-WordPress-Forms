@@ -59,7 +59,7 @@ final class JetFormBuilder extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('jet-form-builder/form-handler/before-send', function ($formHandler) use ($gate) {
+        add_action('jet-form-builder/form-handler/before-send', \Maspik\Kernel\Guard::wrap(function ($formHandler) use ($gate) {
             $raw = $this->extractFields($formHandler);
             if ($raw === []) {
                 return;
@@ -77,7 +77,7 @@ final class JetFormBuilder extends AbstractFormIntegration
             if (class_exists('\Jet_Form_Builder\Exceptions\Request_Exception')) {
                 throw new \Jet_Form_Builder\Exceptions\Request_Exception($message, [$key => $message]);
             }
-        }, 10, 1);
+        }), 10, 1);
     }
 
     /**

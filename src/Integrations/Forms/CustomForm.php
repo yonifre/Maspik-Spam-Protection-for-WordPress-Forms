@@ -210,7 +210,7 @@ final class CustomForm extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('maspik_validate_custom_form_fields', function ($isSpam, $fields = [], $formName = 'Custom Form') use ($gate) {
+        add_filter('maspik_validate_custom_form_fields', \Maspik\Kernel\Guard::wrap(function ($isSpam, $fields = [], $formName = 'Custom Form') use ($gate) {
             // Another handler already decided — respect it (v2 behaviour).
             if ($isSpam !== false) {
                 return $isSpam;
@@ -250,6 +250,6 @@ final class CustomForm extends AbstractFormIntegration
                 // v3 addition: the layer that blocked it, for precise handling.
                 'check_id' => $verdict->violation->checkId,
             ];
-        }, 10, 3);
+        }), 10, 3);
     }
 }

@@ -62,7 +62,7 @@ final class FluentForms extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('fluentform/validation_errors', function ($errors, $formData, $form, $fields = null) use ($gate) {
+        add_filter('fluentform/validation_errors', \Maspik\Kernel\Guard::wrap(function ($errors, $formData, $form, $fields = null) use ($gate) {
             $formId = is_object($form) && isset($form->id) ? $form->id : 0;
             if (apply_filters('maspik_disable_fluentforms_spam_check', false, $formId)) {
                 return $errors;
@@ -85,7 +85,7 @@ final class FluentForms extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 10, 4);
+        }), 10, 4);
     }
 
     /**

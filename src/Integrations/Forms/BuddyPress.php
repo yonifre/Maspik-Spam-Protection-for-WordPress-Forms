@@ -54,7 +54,7 @@ final class BuddyPress extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('bp_signup_validate', function () use ($gate) {
+        add_action('bp_signup_validate', \Maspik\Kernel\Guard::wrap(function () use ($gate) {
             global $bp;
             if (! isset($bp->signup) || ! is_object($bp->signup)) {
                 return;
@@ -86,6 +86,6 @@ final class BuddyPress extends AbstractFormIntegration
                 $bp->signup->errors = [];
             }
             $bp->signup->errors[$key] = $message;
-        });
+        }));
     }
 }

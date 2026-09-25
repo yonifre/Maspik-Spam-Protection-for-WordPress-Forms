@@ -56,7 +56,7 @@ final class Forminator extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('forminator_custom_form_submit_errors', function ($errors, $formId, $fieldData) use ($gate) {
+        add_filter('forminator_custom_form_submit_errors', \Maspik\Kernel\Guard::wrap(function ($errors, $formId, $fieldData) use ($gate) {
             if (apply_filters('maspik_disable_forminator_spam_check', false, $formId)) {
                 return $errors;
             }
@@ -84,6 +84,6 @@ final class Forminator extends AbstractFormIntegration
             $errors[][$target] = $gate->errorMessage($verdict);
 
             return $errors;
-        }, 30, 3);
+        }), 30, 3);
     }
 }

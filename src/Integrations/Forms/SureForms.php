@@ -102,15 +102,15 @@ final class SureForms extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('srfm_before_fields_processing', function ($formData) {
+        add_filter('srfm_before_fields_processing', \Maspik\Kernel\Guard::wrap(function ($formData) {
             $this->captured = is_array($formData) ? self::fieldsFrom($formData) : [];
 
             // Read-only. Returning anything else here would change what
             // SureForms stores and emails.
             return $formData;
-        }, 5, 1);
+        }), 5, 1);
 
-        add_action('srfm_before_submission', function ($data) use ($gate) {
+        add_action('srfm_before_submission', \Maspik\Kernel\Guard::wrap(function ($data) use ($gate) {
             $formId = is_array($data) && isset($data['form_id']) ? (int) $data['form_id'] : 0;
 
             if (apply_filters('maspik_disable_sureforms_spam_check', false, $formId)) {
@@ -123,9 +123,9 @@ final class SureForms extends AbstractFormIntegration
 
             // Direct-POST evidence: a submission from a rendered form always
             // carries a form id. Signal only — it never blocks on its own.
-            add_filter('maspik/direct_post_score', static function ($score) use ($formId) {
+            add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score) use ($formId) {
                 return $formId > 0 ? $score : max((int) $score, DirectPostSignal::SUREFORMS);
-            }, 10, 1);
+            }), 10, 1);
 
             $verdict = $gate->evaluate($this->submissionFrom($this->captured, self::typeMap()));
             $this->captured = [];
@@ -142,7 +142,7 @@ final class SureForms extends AbstractFormIntegration
                 'code' => 'maspik_spam',
                 'message' => $gate->errorMessage($verdict),
             ]);
-        }, 5, 1);
+        }), 5, 1);
     }
 
     /**

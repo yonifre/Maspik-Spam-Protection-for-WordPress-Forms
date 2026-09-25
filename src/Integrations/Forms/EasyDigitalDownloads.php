@@ -85,7 +85,7 @@ final class EasyDigitalDownloads extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('edd_process_register_form', function () use ($gate) {
+        add_action('edd_process_register_form', \Maspik\Kernel\Guard::wrap(function () use ($gate) {
             if (apply_filters('maspik_disable_edd_registration_spam_check', false)) {
                 return;
             }
@@ -110,7 +110,7 @@ final class EasyDigitalDownloads extends AbstractFormIntegration
             if (function_exists('edd_set_error')) {
                 edd_set_error('maspik_spam', $gate->errorMessage($verdict));
             }
-        });
+        }));
     }
 
     /**

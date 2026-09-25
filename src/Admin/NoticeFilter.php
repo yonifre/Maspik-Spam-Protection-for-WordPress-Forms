@@ -37,7 +37,7 @@ final class NoticeFilter
 
     public static function boot(): void
     {
-        add_action('in_admin_header', [self::class, 'stripForeignNotices'], PHP_INT_MAX);
+        add_action('in_admin_header', \Maspik\Kernel\Guard::wrap([self::class, 'stripForeignNotices']), PHP_INT_MAX);
     }
 
     public static function stripForeignNotices(): void

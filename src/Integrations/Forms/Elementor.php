@@ -61,18 +61,18 @@ final class Elementor extends AbstractFormIntegration
         // Direct-POST evidence: Elementor's own JS always posts `referrer`
         // (see its form bundle). Its absence means the request never went
         // through the site UI. Signal only — never blocks on its own.
-        add_filter('maspik/direct_post_score', static function ($score, $submission = null) {
+        add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score, $submission = null) {
             return self::directPostSentinel($submission) === null
                 ? $score
                 : max((int) $score, DirectPostSignal::ELEMENTOR);
-        }, 10, 2);
+        }), 10, 2);
 
         // The matching sentinel, forwarded as `maspik_referrer` (v2: no_referrer).
-        add_filter('maspik/direct_post_referrer', static function ($sentinel, $submission = null) {
+        add_filter('maspik/direct_post_referrer', \Maspik\Kernel\Guard::wrap(static function ($sentinel, $submission = null) {
             return self::directPostSentinel($submission) ?? $sentinel;
-        }, 10, 2);
+        }), 10, 2);
 
-        add_action('elementor_pro/forms/validation', function ($record, $ajaxHandler) use ($gate) {
+        add_action('elementor_pro/forms/validation', \Maspik\Kernel\Guard::wrap(function ($record, $ajaxHandler) use ($gate) {
             $formName = method_exists($record, 'get_form_settings') ? $record->get_form_settings('form_name') : '';
             if (apply_filters('maspik_disable_elementor_spam_check', false, $formName, $record)) {
                 return;
@@ -106,7 +106,7 @@ final class Elementor extends AbstractFormIntegration
                 $target = 'maspik';
             }
             $ajaxHandler->add_error($target, $message);
-        }, 10, 2);
+        }), 10, 2);
     }
 
     /**

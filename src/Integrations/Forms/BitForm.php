@@ -67,7 +67,7 @@ final class BitForm extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('bitform_filter_form_validation', function ($validated, $formId = 0) use ($gate) {
+        add_filter('bitform_filter_form_validation', \Maspik\Kernel\Guard::wrap(function ($validated, $formId = 0) use ($gate) {
             if (! $validated) {
                 return $validated;
             }
@@ -82,7 +82,7 @@ final class BitForm extends AbstractFormIntegration
             }
 
             return $validated;
-        }, 10, 2);
+        }), 10, 2);
     }
 
     /**

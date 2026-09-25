@@ -127,7 +127,9 @@ final class Menu
             'MASPIK' . $badge,
             $capability,
             'maspik',
-            [$this, 'render'],
+            // Page renders are held by WordPress rather than added as actions, so
+            // Guard is applied by hand; see DashboardWidget::register().
+            \Maspik\Kernel\Guard::wrap([$this, 'render']),
             'dashicons-shield',
             81
         );
@@ -139,11 +141,11 @@ final class Menu
                 $key === 'logs' ? $label . $badge : $label,
                 $capability,
                 $key === 'dashboard' ? 'maspik' : 'maspik-' . $key,
-                [$this, 'render']
+                \Maspik\Kernel\Guard::wrap([$this, 'render'])
             );
         }
 
-        add_action('admin_enqueue_scripts', [$this, 'maybeEnqueue']);
+        add_action('admin_enqueue_scripts', \Maspik\Kernel\Guard::wrap([$this, 'maybeEnqueue']));
     }
 
     public function render(): void
@@ -166,9 +168,9 @@ final class Menu
 
         $assetFile = MASPIK_DIR . '/admin-app/build/' . $page . '.asset.php';
         if (! is_readable($assetFile)) {
-            add_action('admin_notices', static function (): void {
+            add_action('admin_notices', \Maspik\Kernel\Guard::wrap(static function (): void {
                 echo '<div class="notice notice-warning"><p>MASPIK admin app not built. Run <code>npm run build</code> in <code>admin-app/</code>.</p></div>';
-            });
+            }));
 
             return;
         }
@@ -189,7 +191,7 @@ final class Menu
         // predictable file (avoids WordPress's per-script md5 filename, which
         // varies by install path / core version).
         if (in_array('wp-i18n', (array) $asset['dependencies'], true)) {
-            add_filter('load_script_translation_file', [self::class, 'resolveTranslationFile'], 10, 3);
+            add_filter('load_script_translation_file', \Maspik\Kernel\Guard::wrap([self::class, 'resolveTranslationFile']), 10, 3);
             wp_set_script_translations($handle, 'contact-forms-anti-spam', MASPIK_DIR . '/languages');
         }
 

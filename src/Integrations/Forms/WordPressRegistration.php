@@ -44,7 +44,7 @@ final class WordPressRegistration extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('registration_errors', function ($errors, $login, $email) use ($gate) {
+        add_filter('registration_errors', \Maspik\Kernel\Guard::wrap(function ($errors, $login, $email) use ($gate) {
             if (apply_filters('maspik_disable_registration_spam_check', false)) {
                 return $errors;
             }
@@ -63,6 +63,6 @@ final class WordPressRegistration extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 10, 3);
+        }), 10, 3);
     }
 }

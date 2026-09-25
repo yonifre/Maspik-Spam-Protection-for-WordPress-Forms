@@ -115,13 +115,13 @@ final class IntegrationsProvider implements ServiceProvider
         // by constants and classes the other plugin defines when it loads, well
         // before this point. Attaching earlier is only ever safer, because a
         // hook added before it fires still fires.
-        add_action('init', static function () use ($c): void {
+        add_action('init', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $registry = $c->get(Registry::class);
 
             /** Third parties may register custom integrations. */
             do_action('maspik/register_integrations', $registry);
 
             $registry->activateEnabled();
-        }, 0);
+        }), 0);
     }
 }

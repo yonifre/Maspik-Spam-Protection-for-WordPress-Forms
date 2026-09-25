@@ -114,6 +114,7 @@ return array(
     'Maspik\\Integrations\\Support\\UnknownFieldTypes' => $baseDir . '/src/Integrations/Support/UnknownFieldTypes.php',
     'Maspik\\Kernel\\Activation' => $baseDir . '/src/Kernel/Activation.php',
     'Maspik\\Kernel\\Container' => $baseDir . '/src/Kernel/Container.php',
+    'Maspik\\Kernel\\Guard' => $baseDir . '/src/Kernel/Guard.php',
     'Maspik\\Kernel\\Plugin' => $baseDir . '/src/Kernel/Plugin.php',
     'Maspik\\Kernel\\ServiceProvider' => $baseDir . '/src/Kernel/ServiceProvider.php',
     'Maspik\\Kernel\\Upgrade' => $baseDir . '/src/Kernel/Upgrade.php',

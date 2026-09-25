@@ -61,7 +61,7 @@ final class Plugin
         // integrations are skipped and those forms go unprotected. Hooked on
         // `init` so options, $wpdb and the textdomain are all ready, and ahead
         // of any form submission, which can only arrive later in the request.
-        add_action('init', [Upgrade::class, 'maybeRun'], 1);
+        add_action('init', \Maspik\Kernel\Guard::wrap([Upgrade::class, 'maybeRun']), 1);
 
         foreach ($this->providers as $provider) {
             $provider->register($this->container);

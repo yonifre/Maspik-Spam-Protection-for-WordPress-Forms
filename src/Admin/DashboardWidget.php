@@ -55,10 +55,16 @@ final class DashboardWidget
             return;
         }
 
+        // The render callback is held by WordPress and called later, while the
+        // dashboard prints - outside anything registered through add_action, so
+        // Guard has to be applied here by hand. This widget builds the engine to
+        // report its status, and the dashboard is the first page after login:
+        // unguarded, any missing engine class meant a white screen the moment a
+        // site owner signed in.
         wp_add_dashboard_widget(
             self::WIDGET_ID,
             __('Maspik – Spam protection', 'contact-forms-anti-spam'),
-            [$this, 'render']
+            \Maspik\Kernel\Guard::wrap([$this, 'render'])
         );
     }
 

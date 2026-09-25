@@ -84,7 +84,7 @@ final class AffiliateWP extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_action('affwp_process_register_form', function () use ($gate) {
+        add_action('affwp_process_register_form', \Maspik\Kernel\Guard::wrap(function () use ($gate) {
             if (apply_filters('maspik_disable_affiliatewp_spam_check', false)) {
                 return;
             }
@@ -115,7 +115,7 @@ final class AffiliateWP extends AbstractFormIntegration
             }
 
             $register->add_error('maspik_spam', $gate->errorMessage($verdict));
-        });
+        }));
     }
 
     /**

@@ -92,14 +92,14 @@ final class AdminProvider implements ServiceProvider
 
     public function boot(Container $c): void
     {
-        add_action('admin_menu', static function () use ($c): void {
+        add_action('admin_menu', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(Menu::class)->register();
-        });
+        }));
 
         // Only fires on index.php, so nothing here is built on other screens.
-        add_action('wp_dashboard_setup', static function () use ($c): void {
+        add_action('wp_dashboard_setup', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(DashboardWidget::class)->register();
-        });
+        }));
 
         // Keep other plugins' promo/upsell notices off MASPIK's own pages.
         NoticeFilter::boot();
@@ -112,31 +112,54 @@ final class AdminProvider implements ServiceProvider
         // export and erasure themselves run in batches over admin-ajax.
         $c->get(PersonalData::class)->register();
 
-        add_action(DashboardController::CRON_HOOK, static function () use ($c): void {
+        add_action(DashboardController::CRON_HOOK, \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(DashboardController::class)->sync();
-        });
+        }));
 
-        add_action(License::CRON_HOOK, static function () use ($c): void {
+        add_action(License::CRON_HOOK, \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(License::class)->recheck();
-        });
+        }));
 
         // Daily age-based log pruning (no-op unless spam_log_max_age_days is set).
-        add_action('maspik_log_prune', static function () use ($c): void {
+        add_action('maspik_log_prune', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
             $c->get(LogRepository::class)->pruneByAge();
-        });
+        }));
         if (! wp_next_scheduled('maspik_log_prune')) {
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'maspik_log_prune');
         }
 
-        add_action('rest_api_init', static function () use ($c): void {
-            $c->get(SettingsController::class)->registerRoutes();
-            $c->get(LogsController::class)->registerRoutes();
-            $c->get(PlaygroundController::class)->registerRoutes();
-            $c->get(StatsController::class)->registerRoutes();
-            $c->get(RuleTesterController::class)->registerRoutes();
-            $c->get(DashboardController::class)->registerRoutes();
-            $c->get(IntegrationsController::class)->registerRoutes();
-            $c->get(LicenseController::class)->registerRoutes();
-        });
+        // rest_api_init runs for every REST request WordPress serves, ours and
+        // everyone else's. An exception thrown here is not contained to our
+        // routes: it aborts rest_get_server(), so the block editor, Elementor's
+        // editor and every other consumer of the API get a 500 as well. That is
+        // exactly how a missing class file on one site turned into "Elementor
+        // stopped loading" in a bug report.
+        //
+        // Registering routes is not worth that blast radius. If building a
+        // controller fails, our endpoints are simply absent - the admin screens
+        // that call them show their own errors, and the rest of the site's REST
+        // API is untouched.
+        add_action('rest_api_init', \Maspik\Kernel\Guard::wrap(static function () use ($c): void {
+            $controllers = [
+                SettingsController::class,
+                LogsController::class,
+                PlaygroundController::class,
+                StatsController::class,
+                RuleTesterController::class,
+                DashboardController::class,
+                IntegrationsController::class,
+                LicenseController::class,
+            ];
+
+            foreach ($controllers as $controller) {
+                try {
+                    $c->get($controller)->registerRoutes();
+                } catch (\Throwable $e) {
+                    // Per controller, so one broken endpoint does not take the
+                    // other seven with it.
+                    continue;
+                }
+            }
+        }));
     }
 }

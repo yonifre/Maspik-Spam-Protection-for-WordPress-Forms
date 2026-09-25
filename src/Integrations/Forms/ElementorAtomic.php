@@ -75,7 +75,7 @@ final class ElementorAtomic extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('elementor_pro/atomic_forms/spam_check', function ($isSpam, $formFields = [], $widgetSettings = [], $postId = 0) use ($gate) {
+        add_filter('elementor_pro/atomic_forms/spam_check', \Maspik\Kernel\Guard::wrap(function ($isSpam, $formFields = [], $widgetSettings = [], $postId = 0) use ($gate) {
             // Respect an upstream spam decision (e.g. Elementor's own checks).
             if ($isSpam) {
                 return true;
@@ -121,14 +121,14 @@ final class ElementorAtomic extends AbstractFormIntegration
             // Direct-POST evidence (weaker than classic Elementor: Atomic posts
             // no `referrer`, but a post id still identifies the source page).
             $hasContext = ! empty($_SERVER['HTTP_REFERER']) || (int) $postId > 0;
-            add_filter('maspik/direct_post_score', static function ($score) use ($hasContext) {
+            add_filter('maspik/direct_post_score', \Maspik\Kernel\Guard::wrap(static function ($score) use ($hasContext) {
                 return $hasContext ? $score : max((int) $score, DirectPostSignal::ELEMENTOR_ATOMIC);
-            }, 10, 1);
+            }), 10, 1);
 
             $verdict = $gate->evaluate($this->submissionWithHidden(FieldMapper::map($raw, self::typeMap()), $hidden));
 
             return $verdict->isSpam ? true : $isSpam;
-        }, 10, 4);
+        }), 10, 4);
     }
 
     /** Collapse array values to a single string, mirroring v2 normalization. */

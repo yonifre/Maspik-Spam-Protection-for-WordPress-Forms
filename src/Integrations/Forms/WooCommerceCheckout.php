@@ -100,7 +100,7 @@ final class WooCommerceCheckout extends AbstractFormIntegration
         // fires woocommerce_after_checkout_validation, so it needs its own hook.
         // This one runs after the order is built but before payment is taken,
         // and a RouteException aborts checkout with a message for the customer.
-        add_action('woocommerce_store_api_checkout_order_processed', function ($order) use ($gate) {
+        add_action('woocommerce_store_api_checkout_order_processed', \Maspik\Kernel\Guard::wrap(function ($order) use ($gate) {
             if (! $this->enabled() || ! is_object($order) || ! method_exists($order, 'get_total')) {
                 return;
             }
@@ -137,9 +137,9 @@ final class WooCommerceCheckout extends AbstractFormIntegration
                     403
                 );
             }
-        }, 10, 1);
+        }), 10, 1);
 
-        add_action('woocommerce_after_checkout_validation', function ($data, $errors) use ($gate) {
+        add_action('woocommerce_after_checkout_validation', \Maspik\Kernel\Guard::wrap(function ($data, $errors) use ($gate) {
             // Pro-only, and strictly opt-in (default off — must equal 'yes').
             if (! $this->proGate->supports('plugin')) {
                 return;
@@ -179,7 +179,7 @@ final class WooCommerceCheckout extends AbstractFormIntegration
             $custom = trim($this->settings->raw('maspik_woo_orders_error_message'));
             $message = $custom !== '' ? $custom : $gate->errorMessage($verdict);
             $errors->add('maspik_spam', $message);
-        }, 10, 2);
+        }), 10, 2);
     }
 
     /** Pro-only, and strictly opt-in — the toggle must be an explicit 'yes'. */

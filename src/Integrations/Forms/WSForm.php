@@ -90,7 +90,7 @@ final class WSForm extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('wsf_submit_validate', function ($errors, $postMode = '', $submit = null) use ($gate) {
+        add_filter('wsf_submit_validate', \Maspik\Kernel\Guard::wrap(function ($errors, $postMode = '', $submit = null) use ($gate) {
             $errors = is_array($errors) ? $errors : [];
 
             // Only a real submission. WS Form runs this filter for saves and
@@ -125,7 +125,7 @@ final class WSForm extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 10, 3);
+        }), 10, 3);
     }
 
     /**

@@ -60,8 +60,8 @@ final class PersonalData
 
     public function register(): void
     {
-        add_filter('wp_privacy_personal_data_exporters', [$this, 'registerExporter']);
-        add_filter('wp_privacy_personal_data_erasers', [$this, 'registerEraser']);
+        add_filter('wp_privacy_personal_data_exporters', \Maspik\Kernel\Guard::wrap([$this, 'registerExporter']));
+        add_filter('wp_privacy_personal_data_erasers', \Maspik\Kernel\Guard::wrap([$this, 'registerEraser']));
     }
 
     /**

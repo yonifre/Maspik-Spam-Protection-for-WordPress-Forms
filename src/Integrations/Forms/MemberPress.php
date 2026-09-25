@@ -93,7 +93,7 @@ final class MemberPress extends AbstractFormIntegration
 
     public function register(SpamGate $gate): void
     {
-        add_filter('mepr_validate_signup', function ($errors) use ($gate) {
+        add_filter('mepr_validate_signup', \Maspik\Kernel\Guard::wrap(function ($errors) use ($gate) {
             $errors = is_array($errors) ? $errors : [];
 
             $productId = $this->productId();
@@ -123,7 +123,7 @@ final class MemberPress extends AbstractFormIntegration
             }
 
             return $errors;
-        }, 20, 1);
+        }), 20, 1);
     }
 
     /**
