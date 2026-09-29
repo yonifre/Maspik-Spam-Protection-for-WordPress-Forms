@@ -91,6 +91,12 @@ final class SettingsController
         // engine used them, but this response never returned them, so the field
         // came back empty on every reload and looked like the save had failed.
         foreach ($this->settings->all() as $key => $value) {
+            // PHP turns a numeric-string array key ("0", "12") into an int, and
+            // Settings::all() is keyed by option name, so a row whose name is a
+            // number - they exist on real sites, left by older releases - arrives
+            // here as an int. Under strict_types, strpos() then threw a TypeError
+            // and the settings screen never loaded.
+            $key = (string) $key;
             if (strpos($key, 'custom_error_message_') === 0 && ! isset($values[$key])) {
                 $values[$key] = [
                     'value' => $value,

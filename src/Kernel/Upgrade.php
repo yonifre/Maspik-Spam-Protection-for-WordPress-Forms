@@ -54,7 +54,7 @@ final class Upgrade
         self::repairLanguageLists();
         self::repairVerificationKey();
 
-        $stored = (string) get_option(self::VERSION_OPTION, '');
+        $stored = \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::VERSION_OPTION, ''));
         if ($stored === MASPIK_VERSION) {
             // The overwhelmingly common path, on every request: one read of an
             // autoloaded option, already in the options cache. No query.

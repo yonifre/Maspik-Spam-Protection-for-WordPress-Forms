@@ -97,7 +97,7 @@ final class TelemetryCollector
         return [
             'version' => defined('MASPIK_VERSION') ? MASPIK_VERSION : '',
             'plan' => $this->pro->isActive() ? 'pro' : 'free',
-            'upgraded_from' => (string) get_option('maspik_previous_version', ''),
+            'upgraded_from' => \Maspik\Infrastructure\Settings\OptionValue::string(get_option('maspik_previous_version', '')),
             'matrix_enabled' => $this->settings->bool('maspik_ai_enabled'),
             'matrix_mode' => $this->settings->matrixMode(),
             'log_mode' => $this->settings->logMode(),

@@ -79,7 +79,7 @@ final class DashboardController
             'last_sync' => get_option('maspik_dashboard_last_sync', ''),
             // '' when the last pull succeeded; otherwise why it did not, so the
             // admin can say the rules on screen may be out of date.
-            'last_error' => (string) get_option(self::LAST_ERROR_OPTION, ''),
+            'last_error' => \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::LAST_ERROR_OPTION, '')),
         ]);
     }
 

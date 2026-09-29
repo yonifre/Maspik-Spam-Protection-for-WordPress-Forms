@@ -45,13 +45,13 @@ final class License
 
     public function key(): string
     {
-        return (string) get_option(self::KEY_OPTION, '');
+        return \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::KEY_OPTION, ''));
     }
 
     /** Per-site activation token from DLM — used to authenticate Matrix calls. */
     public function token(): string
     {
-        return (string) get_option(self::TOKEN_OPTION, '');
+        return \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::TOKEN_OPTION, ''));
     }
 
     public function isActive(): bool
@@ -73,8 +73,8 @@ final class License
         return [
             'active' => $this->isActive(),
             'has_key' => $this->key() !== '',
-            'expires_at' => (string) get_option(self::EXPIRES_OPTION, ''),
-            'checked_at' => (string) get_option(self::CHECKED_OPTION, ''),
+            'expires_at' => \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::EXPIRES_OPTION, '')),
+            'checked_at' => \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::CHECKED_OPTION, '')),
             'state' => isset($status['state']) ? (string) $status['state'] : ($this->isActive() ? 'active' : 'free'),
             'message' => isset($status['message']) ? (string) $status['message'] : '',
             // Dashboard IDs the license server associated with this account (v2
@@ -249,7 +249,7 @@ final class License
      */
     public function resume(): void
     {
-        if ((string) get_option(self::TOKEN_OPTION, '') === '') {
+        if (\Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::TOKEN_OPTION, '')) === '') {
             return;
         }
 
@@ -259,7 +259,7 @@ final class License
 
     public function deactivate(): void
     {
-        $token = (string) get_option(self::TOKEN_OPTION, '');
+        $token = \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::TOKEN_OPTION, ''));
         if ($token !== '') {
             // Best-effort: release the seat on the server. Local state is cleared
             // regardless of the server's reply.
@@ -291,7 +291,7 @@ final class License
      */
     public function recheck(): void
     {
-        $token = (string) get_option(self::TOKEN_OPTION, '');
+        $token = \Maspik\Infrastructure\Settings\OptionValue::string(get_option(self::TOKEN_OPTION, ''));
         if ($token === '') {
             return;
         }

@@ -68,6 +68,7 @@ return array(
     'Maspik\\Infrastructure\\Privacy\\PersonalData' => $baseDir . '/src/Infrastructure/Privacy/PersonalData.php',
     'Maspik\\Infrastructure\\Reputation\\IpReputationResolver' => $baseDir . '/src/Infrastructure/Reputation/IpReputationResolver.php',
     'Maspik\\Infrastructure\\Settings\\DashboardRules' => $baseDir . '/src/Infrastructure/Settings/DashboardRules.php',
+    'Maspik\\Infrastructure\\Settings\\OptionValue' => $baseDir . '/src/Infrastructure/Settings/OptionValue.php',
     'Maspik\\Infrastructure\\Settings\\Schema' => $baseDir . '/src/Infrastructure/Settings/Schema.php',
     'Maspik\\Infrastructure\\Settings\\Settings' => $baseDir . '/src/Infrastructure/Settings/Settings.php',
     'Maspik\\Infrastructure\\Signals\\ObservedSignals' => $baseDir . '/src/Infrastructure/Signals/ObservedSignals.php',

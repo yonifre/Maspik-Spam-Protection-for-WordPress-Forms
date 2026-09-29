@@ -62,6 +62,11 @@ final class DashboardRules
     {
         $out = [];
         foreach ($raw as $field => $value) {
+            // A numeric field name arrives as an int (PHP converts numeric-string
+            // array keys), and the strpos() below throws on an int under
+            // strict_types - the same failure that stopped the settings screen
+            // loading on a site with a numerically named option.
+            $field = (string) $field;
             $key = self::KEY_MAP[$field] ?? $field;
 
             // Per-check error messages are keyed by check id, so they cannot be

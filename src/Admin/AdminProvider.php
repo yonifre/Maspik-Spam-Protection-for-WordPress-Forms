@@ -128,6 +128,38 @@ final class AdminProvider implements ServiceProvider
             wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'maspik_log_prune');
         }
 
+        // Our API is the admin screens' only view of the settings, so a cached
+        // copy of it means the screen shows old values: save a toggle, the
+        // screen refetches, the cache answers with the previous state, and the
+        // toggle flips back until someone purges.
+        //
+        // LiteSpeed Cache does exactly that when "Cache REST API" is on together
+        // with "Cache Logged-in Users" or ESI. REST requests are not is_admin(),
+        // so its logged-in exemption does not apply, and it marks every REST
+        // request cacheable at rest_api_init. WordPress's own no-cache headers do
+        // not stop it; LiteSpeed decides from its own flags. Its official
+        // litespeed_control_set_nocache action sets the flag that wins over
+        // "cacheable", and its header is only sent at shutdown, so raising it
+        // here is in time.
+        //
+        // The standard headers are for every other cache between the browser
+        // and PHP - hosting caches, Varnish, Cloudflare rules. Nothing about an
+        // admin API response is safe to reuse.
+        add_filter('rest_post_dispatch', \Maspik\Kernel\Guard::wrap(static function ($response, $server = null, $request = null) {
+            if (! $request instanceof \WP_REST_Request || strpos($request->get_route(), '/maspik/v1') !== 0) {
+                return $response;
+            }
+
+            do_action('litespeed_control_set_nocache', 'Maspik admin API: settings must never be served stale');
+
+            if ($response instanceof \WP_HTTP_Response) {
+                $response->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, private');
+                $response->header('X-LiteSpeed-Cache-Control', 'no-cache');
+            }
+
+            return $response;
+        }), 10, 3);
+
         // rest_api_init runs for every REST request WordPress serves, ours and
         // everyone else's. An exception thrown here is not contained to our
         // routes: it aborts rest_get_server(), so the block editor, Elementor's

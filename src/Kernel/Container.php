@@ -40,7 +40,15 @@ final class Container
     {
         if (! isset($this->instances[$id])) {
             if (! isset($this->factories[$id])) {
-                throw new \RuntimeException(sprintf('Maspik container: unknown service "%s".', $id));
+                // An \Error, not an \Exception. This is a defect - a service
+                // asked for that was never registered, which in the field means
+                // files from two releases running side by side after an update
+                // that did not finish, or a stale opcode cache. Guard contains
+                // \Error and deliberately lets \Exception through, because some
+                // host plugins use exceptions as their refusal signal; as a
+                // RuntimeException this one escaped every hook it was raised in
+                // and came out as a 500 on the host's request.
+                throw new \Error(sprintf('Maspik container: unknown service "%s".', $id));
             }
             $this->instances[$id] = ($this->factories[$id])($this);
         }

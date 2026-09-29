@@ -5,7 +5,7 @@ Tags: spam, anti spam, antispam, contact forms, honeypot
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.2
+Stable tag: 3.1.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -282,6 +282,17 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 == Changelog ==
 
+= 3.1.3 =
+Fixed
+
+* Fixed the settings screen failing to load on some sites.
+* Fixed settings changes not appearing until the cache was cleared (LiteSpeed Cache and similar).
+
+Improved
+
+* Improved handling of incomplete plugin updates, with clearer admin notices.
+* The dashboard now shows clearly when the monthly free InputGate limit is reached.
+
 = 3.1.2 =
 Fixed
 
@@ -373,6 +384,9 @@ Improved
 * Requires PHP 7.4+.
 
 == Upgrade Notice ==
+
+= 3.1.3 =
+Recommended for everyone.
 
 = 3.1.2 =
 Recommended for everyone, and required for sites using Divi.
