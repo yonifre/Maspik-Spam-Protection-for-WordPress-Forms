@@ -388,7 +388,11 @@ final class Upgrade
         // answer in wp_options. Carry it into the settings key both 3.0
         // surfaces read, so a site that already declined is not asked again
         // just because it upgraded.
-        if (get_option(FullModeNudge::LEGACY_DISMISSED_OPTION) && ! $settings->bool(FullModeNudge::DISMISSED_KEY)) {
+        // Only into an empty key: it now holds the time of the last "Not Now",
+        // and a bool() test reads any timestamp as false - so this would
+        // overwrite a fresh dismissal on every upgrade and reset its snooze.
+        // '1' itself reads as a dismissal in 1970: the site is asked again.
+        if (get_option(FullModeNudge::LEGACY_DISMISSED_OPTION) && trim($settings->raw(FullModeNudge::DISMISSED_KEY)) === '') {
             $settings->save(FullModeNudge::DISMISSED_KEY, '1');
         }
 

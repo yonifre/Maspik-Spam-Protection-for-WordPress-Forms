@@ -3,7 +3,7 @@
  * Plugin Name:       Spam Protection | Maspik
  * Plugin URI:        https://wpmaspik.com
  * Description:       Blocks spam the moment you activate it. No CAPTCHA, no setup, no API key. Multi-Layer. Just install and forget.
- * Version:           3.1.3
+ * Version:           3.1.4
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            WpMaspik
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MASPIK_VERSION', '3.1.3' );
+define( 'MASPIK_VERSION', '3.1.4' );
 define( 'MASPIK_FILE', __FILE__ );
 define( 'MASPIK_DIR', __DIR__ );
 define( 'MASPIK_URL', plugin_dir_url( __FILE__ ) );

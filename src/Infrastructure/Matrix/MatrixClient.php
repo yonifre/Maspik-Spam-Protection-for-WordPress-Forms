@@ -107,6 +107,11 @@ final class MatrixClient
         // effectively unlimited.
         if (! $this->pro->supports('pro') && $this->monthlyRemaining() <= 0) {
             SignalDebugLog::noteSkipped('monthly free quota exhausted');
+            // Recorded like a timeout or an error below, so the stored trace says
+            // InputGate did not check this submission. Without it the trace read
+            // "passed", and a submission the cloud never saw looked exactly like
+            // one it had cleared.
+            LayerStatus::record('ai_spam_check', LayerStatus::SKIPPED, 'Monthly InputGate limit reached');
 
             return null;
         }

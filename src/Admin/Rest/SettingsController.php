@@ -114,6 +114,17 @@ final class SettingsController
             // actually applying instead of rendering blank next to a rule the
             // engine is enforcing.
             'dashboard_values' => $this->dashboardValues(),
+            // Which full-protection prompt to show - decided here, once, for
+            // both the admin app and the wp-admin notice. See
+            // Settings::fullProtectionPrompt().
+            'full_protection' => [
+                'prompt' => $this->settings->fullProtectionPrompt(),
+                'from_dashboard' => $this->settings->fullProtectionFromDashboard(),
+                // Whether InputGate is on and reading content, after the
+                // Dashboard and the old '3' are taken into account - the raw
+                // setting alone answers neither.
+                'ip_only' => $this->settings->boolEffective('maspik_ai_enabled') && $this->settings->matrixMode() !== '4',
+            ],
             // The text a visitor sees when nothing is configured. Sent so the
             // admin can show it as a placeholder instead of duplicating the
             // string in JS, where it would drift from the PHP the moment either
@@ -131,8 +142,10 @@ final class SettingsController
      */
     private function syncedFromDashboard(): array
     {
-        $dashboard = get_option('spamapi');
-        if (! is_array($dashboard)) {
+        // Through Settings, so the screens show exactly what the engine applies:
+        // nothing from the Dashboard while the site is not Pro.
+        $dashboard = $this->settings->dashboardData();
+        if ($dashboard === []) {
             return [];
         }
 
@@ -160,8 +173,10 @@ final class SettingsController
      */
     private function forcedByDashboard(): array
     {
-        $dashboard = get_option('spamapi');
-        if (! is_array($dashboard)) {
+        // Through Settings, so the screens show exactly what the engine applies:
+        // nothing from the Dashboard while the site is not Pro.
+        $dashboard = $this->settings->dashboardData();
+        if ($dashboard === []) {
             return [];
         }
 
@@ -210,8 +225,10 @@ final class SettingsController
      */
     private function dashboardValues(): array
     {
-        $dashboard = get_option('spamapi');
-        if (! is_array($dashboard)) {
+        // Through Settings, so the screens show exactly what the engine applies:
+        // nothing from the Dashboard while the site is not Pro.
+        $dashboard = $this->settings->dashboardData();
+        if ($dashboard === []) {
             return [];
         }
 
@@ -256,6 +273,15 @@ final class SettingsController
             }
             $this->settings->save($key, sanitize_textarea_field((string) $value));
             $updated[] = $key;
+        }
+
+        // Picking a mode in the InputGate drawer answers the first-run question
+        // too, so a site that already chose is not asked again on the Dashboard.
+        // Choosing IP only does not snooze the invitation: only "Not Now" does.
+        $params = (array) $request->get_json_params();
+        if (in_array('maspik_matrix_api_mode', $updated, true) && ! in_array('maspik_inputgate_choice', $updated, true)) {
+            $full = in_array((string) $params['maspik_matrix_api_mode'], ['3', '4'], true);
+            $this->settings->save('maspik_inputgate_choice', $full ? 'full' : 'ip');
         }
 
         return new WP_REST_Response(['updated' => $updated]);

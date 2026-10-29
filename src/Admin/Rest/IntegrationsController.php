@@ -76,11 +76,21 @@ final class IntegrationsController
      */
     private function wooGateways(): array
     {
-        if (! function_exists('WC') || ! WC() || ! isset(WC()->payment_gateways)) {
+        // payment_gateways is a magic property on WooCommerce (__get, no
+        // __isset), so isset() is always false — call the accessor method.
+        if (! function_exists('WC') || ! WC() || ! method_exists(WC(), 'payment_gateways')) {
             return [];
         }
 
-        $gateways = WC()->payment_gateways->payment_gateways();
+        // Loading the gateways runs every payment plugin's constructor, and one
+        // that throws would take this whole response - and the integrations
+        // list on the Dashboard and Advanced screens - down with it. Without a
+        // list the gateway picker is simply empty, which is what it was before.
+        try {
+            $gateways = WC()->payment_gateways()->payment_gateways();
+        } catch (\Throwable $e) {
+            return [];
+        }
         if (! is_array($gateways)) {
             return [];
         }

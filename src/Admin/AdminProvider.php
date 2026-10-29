@@ -146,7 +146,13 @@ final class AdminProvider implements ServiceProvider
         // and PHP - hosting caches, Varnish, Cloudflare rules. Nothing about an
         // admin API response is safe to reuse.
         add_filter('rest_post_dispatch', \Maspik\Kernel\Guard::wrap(static function ($response, $server = null, $request = null) {
-            if (! $request instanceof \WP_REST_Request || strpos($request->get_route(), '/maspik/v1') !== 0) {
+            // get_route() is null until something sets it - WP_REST_Request
+            // declares the property with no default - and other plugins do pass
+            // requests through this filter without one. strpos(null) is a
+            // TypeError under strict_types; Guard contained it, but the site
+            // owner was shown a "Part of Maspik is not working" notice for a
+            // request that was never ours.
+            if (! $request instanceof \WP_REST_Request || strpos((string) $request->get_route(), '/maspik/v1') !== 0) {
                 return $response;
             }
 

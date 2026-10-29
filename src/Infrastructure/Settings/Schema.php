@@ -99,11 +99,20 @@ final class Schema
             'maspik_ai_enabled' => ['type' => self::TYPE_BOOL, 'default' => '1', 'dashboard' => true],
             'maspik_ai_context' => ['type' => self::TYPE_TEXT, 'default' => ''],
             'maspik_matrix_api_mode' => ['type' => self::TYPE_SELECT, 'default' => '2'],
-            // "Not Now" on the full-protection invitation. Stored here rather
-            // than in wp_options so the admin app can dismiss it through the
-            // settings endpoint it already uses, instead of needing a route of
-            // its own. See Admin\FullModeNudge.
-            'maspik_full_protection_nudge_dismissed' => ['type' => self::TYPE_BOOL, 'default' => ''],
+            // When "Not Now" was last pressed on the full-protection invitation,
+            // as a unix time - a 30-day snooze, not a permanent dismissal.
+            // Stored here rather than in wp_options so the admin app can write it
+            // through the settings endpoint it already uses. It used to hold '1'
+            // for "never ask again"; read as a time, that is 1970, so every site
+            // that dismissed it before is simply asked again. See
+            // Settings::fullProtectionPrompt().
+            'maspik_full_protection_nudge_dismissed' => ['type' => self::TYPE_TEXT, 'default' => ''],
+            // The site owner's answer to the first-run question - 'full' or 'ip' -
+            // or empty while it has not been asked.
+            'maspik_inputgate_choice' => ['type' => self::TYPE_TEXT, 'default' => ''],
+            // Set on the MASPIK Dashboard (ACF field inputgate_full). Like every
+            // other Dashboard switch it can turn Full Protection on, never off.
+            'inputgate_full' => ['type' => self::TYPE_BOOL, 'default' => '', 'dashboard' => true],
 
             // Logging & misc. maspik_Store_log: 'none' | 'blocked' | 'all'
             // (legacy 'no' => none, 'yes'/'' => blocked; see Settings::logMode()).

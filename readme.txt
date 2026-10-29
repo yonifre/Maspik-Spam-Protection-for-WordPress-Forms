@@ -5,7 +5,7 @@ Tags: spam, anti spam, antispam, contact forms, honeypot
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 3.1.3
+Stable tag: 3.1.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -282,6 +282,14 @@ Yes. Settings, logs, your license and your Dashboard connection all carry over a
 
 == Changelog ==
 
+= 3.1.4 =
+* Improve the admin screens on mobile.
+* Added the ability to enable InputGate Full Protection from the MASPIK Dashboard.
+* Fixed several issues with admin screens, settings, and dashboard labels.
+* Fixed the Dashboard label missing from layers whose values are set in the Dashboard.
+* Fixed the WooCommerce payment gateway list in the Orders setting.
+* Logs now show when InputGate skipped a submission because the monthly limit was reached.
+
 = 3.1.3 =
 Fixed
 
@@ -384,6 +392,9 @@ Improved
 * Requires PHP 7.4+.
 
 == Upgrade Notice ==
+
+= 3.1.4 =
+Recommended for everyone.
 
 = 3.1.3 =
 Recommended for everyone.

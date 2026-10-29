@@ -95,6 +95,7 @@ final class FullModeNudge
 
         if ($action === 'full') {
             $this->settings->save('maspik_matrix_api_mode', '4');
+            $this->settings->save('maspik_inputgate_choice', 'full');
             // The notice only shows while Matrix is on, but save it explicitly
             // so the button can never leave the mode set and the layer off.
             $this->settings->save('maspik_ai_enabled', '1');
@@ -102,7 +103,13 @@ final class FullModeNudge
             // because the mode changed, so if the site ever returns to IP-only
             // the invitation is still available.
         } elseif ($action === 'dismiss') {
-            $this->settings->save(self::DISMISSED_KEY, '1');
+            // A snooze, not a "never again": the time is stored and the
+            // invitation comes back after Settings::FULL_PROTECTION_SNOOZE.
+            // Declining here also answers the first-run question.
+            $this->settings->save(self::DISMISSED_KEY, (string) time());
+            if (trim($this->settings->raw('maspik_inputgate_choice')) === '') {
+                $this->settings->save('maspik_inputgate_choice', 'ip');
+            }
         }
 
         wp_safe_redirect(remove_query_arg([self::ACTION, '_wpnonce']));
@@ -120,17 +127,17 @@ final class FullModeNudge
         ?>
         <div class="notice notice-info">
             <p>
-                <strong><?php esc_html_e('Improve your spam protection for free', 'contact-forms-anti-spam'); ?></strong>
+                <strong><?php esc_html_e('Let Maspik Catch More Spam', 'contact-forms-anti-spam'); ?></strong>
             </p>
             <p>
-                <?php esc_html_e('Maspik is currently protecting your forms mainly by checking the sender’s IP address.', 'contact-forms-anti-spam'); ?>
+                <?php esc_html_e('Give your forms an extra layer of protection. Analyze content, behavior, and other spam signals, not just IP addresses.', 'contact-forms-anti-spam'); ?>
             </p>
             <p>
-                <?php esc_html_e('We recommend enabling Full Protection. It’s completely free and adds additional layers of spam protection by analyzing submitted content, user behavior, and other spam signals to detect more spam.', 'contact-forms-anti-spam'); ?>
+                <strong><?php esc_html_e('Free to enable. Over 30% more spam blocked.', 'contact-forms-anti-spam'); ?></strong>
             </p>
             <p>
                 <a href="<?php echo esc_url($activate); ?>" class="button button-primary">
-                    <?php esc_html_e('Enable Full Protection', 'contact-forms-anti-spam'); ?>
+                    <?php esc_html_e('Get Full Protection', 'contact-forms-anti-spam'); ?>
                 </a>
                 <?php // Opens the feature's documentation, so "what am I turning on?"
                       // is answerable without leaving the decision. External, so it
@@ -161,14 +168,6 @@ final class FullModeNudge
             return false;
         }
 
-        if ($this->settings->bool(self::DISMISSED_KEY)) {
-            return false;
-        }
-
-        if (! $this->settings->bool('maspik_ai_enabled')) {
-            return false;
-        }
-
-        return $this->settings->matrixMode() === '2';
+        return $this->settings->fullProtectionPrompt() !== '';
     }
 }

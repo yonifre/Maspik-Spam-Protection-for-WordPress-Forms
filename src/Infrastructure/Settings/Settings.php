@@ -63,6 +63,12 @@ class Settings
      */
     public function matrixMode(): string
     {
+        // The Dashboard can switch Full Protection on for a site (and for every
+        // site an agency manages) without touching each one.
+        if ($this->fullProtectionFromDashboard()) {
+            return '4';
+        }
+
         $mode = trim($this->raw('maspik_matrix_api_mode'));
 
         // Whitelist the full-pipeline values ('3' is the retired "IP + banned
@@ -70,6 +76,43 @@ class Settings
         // empty or unrecognised value — falls back to IP-only, so form content
         // is never sent to the cloud unless it was explicitly chosen.
         return ($mode === '4' || $mode === '3') ? '4' : '2';
+    }
+
+    /** The MASPIK Dashboard has switched Full Protection on for this site. */
+    public function fullProtectionFromDashboard(): bool
+    {
+        $value = $this->dashboardValue('inputgate_full');
+
+        return $value === true || $value === 1 || $value === '1' || $value === 'yes';
+    }
+
+    /** How long "Not Now" keeps the full-protection invitation away. */
+    public const FULL_PROTECTION_SNOOZE = 30 * 86400;
+
+    /**
+     * Which full-protection prompt the admin should show, if any.
+     *
+     *  'choice' - never asked: the first-run "how should InputGate protect
+     *             you?" question, Full Protection pre-selected
+     *  'invite' - asked before and kept IP-only, and the 30-day snooze is over
+     *  ''       - nothing: already on Full, InputGate off, or snoozed
+     *
+     * The one source of truth for both places that ask - the wp-admin notice
+     * and the admin app - so they can never disagree about whether to ask.
+     */
+    public function fullProtectionPrompt(?int $now = null): string
+    {
+        if (! $this->boolEffective('maspik_ai_enabled') || $this->matrixMode() === '4') {
+            return '';
+        }
+        if (trim($this->raw('maspik_inputgate_choice')) === '') {
+            return 'choice';
+        }
+
+        $dismissedAt = (int) $this->raw('maspik_full_protection_nudge_dismissed');
+        $now = $now ?? time();
+
+        return $now - $dismissedAt >= self::FULL_PROTECTION_SNOOZE ? 'invite' : '';
     }
 
     public function logMode(): string
@@ -252,6 +295,14 @@ class Settings
         // Dashboard overrides entirely when it defines country rules (v2 behavior).
         $apiList = $this->dashboardValue('country_blacklist');
         $apiMode = $this->dashboardValue('AllowedOrBlockCountries');
+        // A select field can arrive from the Dashboard as a one-item array.
+        // v2 read its first element (efas_get_spam_api took [0]); compared as
+        // an array, the mode matched neither 'allow' nor 'block', and the
+        // Dashboard's countries were silently ignored while the admin still
+        // showed them as synced.
+        if (is_array($apiMode)) {
+            $apiMode = $apiMode[0] ?? null;
+        }
         if (is_array($apiList) && $apiList !== [] && in_array($apiMode, ['allow', 'block'], true)) {
             $mode = $apiMode;
             $list = array_map('strval', $apiList);
@@ -474,12 +525,33 @@ class Settings
     }
 
     /** @return mixed */
-    private function dashboardValue(string $key)
+    /**
+     * The values the MASPIK Dashboard stored for this site, or [] when they do
+     * not apply.
+     *
+     * The Dashboard is a Pro feature: connecting and refreshing already require
+     * it. The stored values stay behind when a licence lapses, though, and were
+     * still being enforced - a Free site kept the last Dashboard rules it pulled,
+     * Pro-only country rules included, showed them as "Dashboard" and could not
+     * refresh or change them. v2 ignored them without Pro
+     * (efas_get_spam_api() checked cfes_is_supporting("api")), and so does this.
+     * They are not deleted: renewing brings them back as they were.
+     *
+     * @return array<string|int, mixed>
+     */
+    public function dashboardData(): array
     {
         if ($this->dashboard === null) {
             $option = get_option('spamapi');
-            $this->dashboard = is_array($option) ? $option : [];
+            $this->dashboard = is_array($option) && (new \Maspik\Premium\ProGate())->supports('dashboard') ? $option : [];
         }
+
+        return $this->dashboard;
+    }
+
+    private function dashboardValue(string $key)
+    {
+        $this->dashboardData();
 
         if (isset($this->dashboard[$key])) {
             return $this->dashboard[$key];
